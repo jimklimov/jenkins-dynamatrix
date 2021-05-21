@@ -1,4 +1,8 @@
+import org.nut.dynamatrix.ioc.ContextRegistry
+
 void call(String stashName) {
+    ContextRegistry.registerDefaultContext(this)
+
     /* clean up our workspace */
     deleteDir()
     /* clean up tmp directory */

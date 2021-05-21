@@ -11,6 +11,9 @@ import org.nut.dynamatrix.NodeData;
 import org.nut.dynamatrix.Utils;
 import org.nut.dynamatrix.dynamatrixGlobalState;
 
+import org.nut.dynamatrix.IStepExecutor
+import org.nut.dynamatrix.ioc.ContextRegistry
+
 /* This class intends to represent one build matrix which can be used
  * to produce several "closely related" build stages re-using the same
  * set of build agents and project configurations.
@@ -23,7 +26,7 @@ class Dynamatrix implements Cloneable {
 
     // Have some defaults, if only to have all expected fields defined
     private DynamatrixConfig dynacfg
-    private def script
+    private IStepExecutor script
     public Boolean enableDebugTrace = dynamatrixGlobalState.enableDebugTrace
     public Boolean enableDebugErrors = dynamatrixGlobalState.enableDebugErrors
     public Boolean enableDebugMilestones = dynamatrixGlobalState.enableDebugMilestones
@@ -42,8 +45,8 @@ class Dynamatrix implements Cloneable {
     // key=value's are persistently grouped, e.g. "COMPILER=GCC GCCVER=123")
     Map<String, Set> buildLabelsAgents = [:]
 
-    public Dynamatrix(Object script) {
-        this.script = script
+    public Dynamatrix() {
+        this.script = ContextRegistry.getContext().getStepExecutor()
         this.dynacfg = new DynamatrixConfig(script)
         this.enableDebugTrace = dynamatrixGlobalState.enableDebugTrace
         this.enableDebugErrors = dynamatrixGlobalState.enableDebugErrors
@@ -66,7 +69,7 @@ class Dynamatrix implements Cloneable {
         }
 
         if (!nodeCapsCache.containsKey(labelExpr)) {
-            nodeCapsCache[labelExpr] = new NodeCaps(this, dynacfg.commonLabelExpr, dynamatrixGlobalState.enableDebugTrace, dynamatrixGlobalState.enableDebugErrors)
+            nodeCapsCache[labelExpr] = new NodeCaps(dynacfg.commonLabelExpr, dynamatrixGlobalState.enableDebugTrace, dynamatrixGlobalState.enableDebugErrors)
         }
 
         return nodeCapsCache[labelExpr]

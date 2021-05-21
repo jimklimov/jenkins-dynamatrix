@@ -7,6 +7,8 @@
  */
 import org.nut.dynamatrix.*;
 
+import org.nut.dynamatrix.ioc.ContextRegistry
+
 /*
 // For in-place tests as Replay pipeline:
 @Library('jenkins-dynamatrix') _
@@ -56,6 +58,8 @@ import org.nut.dynamatrix.dynamatrixGlobalState;
  */
 
 def call(dynacfgBase = [:], dynacfgPipeline = [:]) {
+    ContextRegistry.registerDefaultContext(this)
+
     // Hacky big switch for a max debug option
     if (true)
     if (false)
@@ -83,7 +87,7 @@ def stageNameFunc_Shellcheck(DynamatrixSingleBuildConfig dsbc) {
         dynacfgBase['defaultDynamatrixConfig'] = "C+CXX"
     }
 
-    DynamatrixConfig dynacfg = new DynamatrixConfig(this)
+    DynamatrixConfig dynacfg = new DynamatrixConfig()
     dynacfg.initDefault(dynacfgBase)
 
     if (dynacfg.compilerType in ['C']) {
@@ -164,7 +168,7 @@ def stageNameFunc_Shellcheck(DynamatrixSingleBuildConfig dsbc) {
     }
     //println "SHELLCHECK: " + Utils.castString(dynacfgPipeline['shellcheck'])
 
-    Dynamatrix dynamatrix = new Dynamatrix(this)
+    Dynamatrix dynamatrix = new Dynamatrix()
     def stashnameSrc = 'src-checkedout'
 
     // To hop over CPS limitations, we first store our stages

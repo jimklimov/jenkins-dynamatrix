@@ -8,6 +8,9 @@ import hudson.model.Node;
 
 import org.nut.dynamatrix.Utils;
 
+import org.nut.dynamatrix.IStepExecutor
+import org.nut.dynamatrix.ioc.ContextRegistry
+
 class NodeData {
     /* This class encapsulates interesting data about a single Jenkins Node.
      * A lot of these data points are stored in a NodeCaps object below.

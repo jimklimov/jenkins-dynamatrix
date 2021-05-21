@@ -9,6 +9,8 @@ import org.nut.dynamatrix.NodeData;
 import org.nut.dynamatrix.Utils;
 import org.nut.dynamatrix.dynamatrixGlobalState;
 
+import org.nut.dynamatrix.ioc.ContextRegistry
+
 /*
  * Example agents and call signature from README:
 
@@ -74,10 +76,11 @@ prepareDynamatrix([
 
 /* Returns a map of stages */
 def call(dynacfgOrig = [:], Closure body = null) {
+    ContextRegistry.registerDefaultContext(this)
     println "[WARNING] NOT FULLY IMPLEMENTED: prepareDynamatrix.groovy"
 
     // Have some defaults, if only to have all expected fields defined
-    Dynamatrix dynamatrix = new Dynamatrix(this)
+    Dynamatrix dynamatrix = new Dynamatrix()
     dynamatrix.prepareDynamatrix(dynacfgOrig)
     return dynamatrix.generateBuild(null, body)
 }

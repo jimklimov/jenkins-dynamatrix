@@ -3,13 +3,16 @@ package org.nut.dynamatrix;
 import org.nut.dynamatrix.Utils;
 import org.nut.dynamatrix.dynamatrixGlobalState;
 
+import org.nut.dynamatrix.IStepExecutor
+import org.nut.dynamatrix.ioc.ContextRegistry
+
 /* This class intends to represent one single build configuration
  * with its agent label, further "virtual labels", env, opts and
  * other matrix-provided tunables derived from DynamatrixConfig
  * and Dynamatrix class field values.
  */
 class DynamatrixSingleBuildConfig implements Cloneable {
-    private def script = null
+    private IStepExecutor script = null
     def stageNameFunc = null
     public Boolean enableDebugTrace = dynamatrixGlobalState.enableDebugTrace
     public Boolean enableDebugErrors = dynamatrixGlobalState.enableDebugErrors
@@ -58,8 +61,8 @@ class DynamatrixSingleBuildConfig implements Cloneable {
     public Boolean isExcluded
     public Boolean isAllowedFailure
 
-    public DynamatrixSingleBuildConfig (script) {
-        this.script = script
+    public DynamatrixSingleBuildConfig () {
+        this.script = ContextRegistry.getContext().getStepExecutor()
         this.enableDebugTrace = dynamatrixGlobalState.enableDebugTrace
         this.enableDebugErrors = dynamatrixGlobalState.enableDebugErrors
     }

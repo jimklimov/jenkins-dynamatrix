@@ -1,4 +1,5 @@
 import org.nut.dynamatrix.*;
+import org.nut.dynamatrix.ioc.ContextRegistry
 
 /*
  * Run one combination of settings in the matrix for default compiler
@@ -7,6 +8,8 @@ import org.nut.dynamatrix.*;
 void call(String BUILD_TYPE, String PLATFORM) {
     // NOTE: Analysis below just assumes the default compiler would be gcc
     // TODO: Detect the reality, or pass the arg?..
+    ContextRegistry.registerDefaultContext(this)
+
     warnError(message: 'Build-and-check step failed, proceeding to cover whole matrix') {
         sh """ BUILD_TYPE="${BUILD_TYPE}" ./ci_build.sh """
     }

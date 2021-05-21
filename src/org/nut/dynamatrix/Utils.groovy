@@ -1,5 +1,8 @@
 package org.nut.dynamatrix;
 
+import org.nut.dynamatrix.IStepExecutor
+import org.nut.dynamatrix.ioc.ContextRegistry
+
 /*
  * Strangely, the Set or list classes I needed in dynamatrix did not include
  * a cartesian multiplication seen in many examples and complained about a

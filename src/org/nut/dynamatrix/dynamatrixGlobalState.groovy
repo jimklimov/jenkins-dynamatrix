@@ -1,5 +1,8 @@
 package org.nut.dynamatrix;
 
+import org.nut.dynamatrix.IStepExecutor
+import org.nut.dynamatrix.ioc.ContextRegistry
+
 class dynamatrixGlobalState {
     // buildMatrixCell* steps populate this with their build analysis results
     static ArrayList<Object> issueAnalysis = []

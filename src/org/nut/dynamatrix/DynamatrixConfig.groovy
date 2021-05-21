@@ -3,13 +3,16 @@ package org.nut.dynamatrix;
 import org.nut.dynamatrix.Utils;
 import org.nut.dynamatrix.dynamatrixGlobalState;
 
+import org.nut.dynamatrix.IStepExecutor
+import org.nut.dynamatrix.ioc.ContextRegistry
+
 /* This class intends to represent one build request configuration
  * An instance of it can be passed as the set of arguments for the
  * customized run Dynamatrix routines, while some defaults can be
  * applied so needed fields are all "defined" when we look at them.
  */
 class DynamatrixConfig implements Cloneable {
-    private def script
+    private IStepExecutor script
     public def stageNameFunc = null
     public Boolean enableDebugTrace = dynamatrixGlobalState.enableDebugTrace
     public Boolean enableDebugErrors = dynamatrixGlobalState.enableDebugErrors
@@ -214,8 +217,8 @@ def parallelStages = prepareDynamatrix(
 
  */
 
-    public DynamatrixConfig(Object script) {
-        this.script = script
+    public DynamatrixConfig() {
+        this.script = ContextRegistry.getContext().getStepExecutor()
     }
 
     @NonCPS
@@ -228,8 +231,8 @@ def parallelStages = prepareDynamatrix(
         return ( (this.enableDebugErrors || this.enableDebugTrace) && this.script != null)
     }
 
-    public DynamatrixConfig(Object script, String defaultCfg) {
-        this.script = script
+    public DynamatrixConfig(String defaultCfg) {
+        this.script = ContextRegistry.getContext().getStepExecutor()
         this.initDefault(defaultCfg)
     }
 

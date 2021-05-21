@@ -10,13 +10,16 @@ import org.nut.dynamatrix.NodeData;
 import org.nut.dynamatrix.Utils;
 import org.nut.dynamatrix.dynamatrixGlobalState;
 
+import org.nut.dynamatrix.IStepExecutor
+import org.nut.dynamatrix.ioc.ContextRegistry
+
 class NodeCaps {
     /* This class encapsulates retrieval, storage and queries to information
      * about labels declared by Jenkins build agents which is of interest to
      * the dynamatrix effort, to know the agents' capabilities.
      */
 
-    def script
+    private IStepExecutor script
 
     private Boolean isInitialized = false
     public Boolean enableDebugTrace = dynamatrixGlobalState.enableDebugTrace
@@ -31,7 +34,7 @@ class NodeCaps {
     // uniqueness...
     public final Map<String, NodeData> nodeData
 
-    public NodeCaps(script, String builderLabel = null, Boolean debugTrace = null, Boolean debugErrors = null) {
+    public NodeCaps(String builderLabel = null, Boolean debugTrace = null, Boolean debugErrors = null) {
         /*
          * Collect all info about useful build agents in one collection:
          * Returns a Map with names of currently known agent which matched the
@@ -40,7 +43,7 @@ class NodeCaps {
          * they declared with further labels mapped as KEY=VALUE entries.
          */
 
-        this.script = script
+        this.script = ContextRegistry.getContext().getStepExecutor()
         if (debugTrace != null) {
             this.enableDebugTrace = debugTrace
         }

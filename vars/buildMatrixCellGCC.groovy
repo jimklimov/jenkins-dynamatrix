@@ -1,9 +1,12 @@
 import org.nut.dynamatrix.*;
+import org.nut.dynamatrix.ioc.ContextRegistry
 
 /*
  * Run one combination of settings in the matrix for chosen compiler, etc.
  */
 void call(String GCCVER, String STD, String STDVER, String PLATFORM, String BUILD_WARNOPT) {
+    ContextRegistry.registerDefaultContext(this)
+
     warnError(message: 'Build-and-check step failed, proceeding to cover whole matrix') {
         sh """ echo "Building with GCC-${GCCVER} STD=${STD}${STDVER} WARN=${BUILD_WARNOPT} on ${PLATFORM}"
 case "${PLATFORM}" in
