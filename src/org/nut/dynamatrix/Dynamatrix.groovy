@@ -7,6 +7,7 @@ import hudson.plugins.git.GitException;
 import hudson.remoting.RequestAbortedException;
 import hudson.remoting.RemotingSystemException;
 import hudson.remoting.ProxyException;
+import org.jenkinsci.plugins.workflow.graph.FlowNode;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -185,6 +186,11 @@ class Dynamatrix implements Cloneable {
      * May get used for regular updates of reportGithubStageStatus() during the run.
      */
     public Integer countStagesExpected = null
+
+    /** Try to track the stage name for updateProgressBadge to tap into */
+    public FlowNode bigRunStageFlow = null
+    /** Try to track the stage name for updateProgressBadge to tap into */
+    public String bigRunStageName = null
 
     /**
      * For each {@code stageName} (map key), track its {@link Result}
@@ -585,6 +591,11 @@ class Dynamatrix implements Cloneable {
         def resSummary = this.createSummary(txt)
         if (res == null || resSummary == false) res = resSummary
 */
+
+        if (bigRunStageFlow != null && bigRunStageName != null) {
+            // see https://stackoverflow.com/a/45224119/4715872
+            // but we have no setter for flow (display) name :(
+        }
 
         return res
     }
