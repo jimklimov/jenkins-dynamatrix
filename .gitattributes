@@ -5,6 +5,7 @@
 *.sh text eol=lf
 
 # Some files are binary always:
+*.jar bin
 *.png bin
 *.ico bin
 
