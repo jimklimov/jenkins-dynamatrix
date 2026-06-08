@@ -4,7 +4,7 @@ package org.nut.dynamatrix;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
-import org.junit.Before;
+//import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.JenkinsRule;
@@ -14,10 +14,12 @@ class genericPipelineTest {
     @Rule
     public JenkinsRule rule = new JenkinsRule()
 
+/*
     @Before
     void configureGlobalGitLibraries() {
         RuleBootstrapper.setup(rule)
     }
+*/
 
     @Test
     void "testing env interaction, inline method definitions and standard pipeline script step calling"() {
@@ -40,5 +42,25 @@ class genericPipelineTest {
 
         final WorkflowRun secondResult = rule.buildAndAssertSuccess(workflowJob)
         rule.assertLogContains('The build number is even', secondResult)
+    }
+
+    /** Make sure gradle setup lets us run all the integration tests
+     * (some fail without prerequisites below, solutions to which
+     * are on the recipe's side rather than JSL or test code base).
+     */
+    @Test
+    void "Testing durable task plugin availability - sh step"() {
+        final CpsFlowDefinition flow = new CpsFlowDefinition('''
+            node {
+                sh 'echo Hello from Shell'
+            }
+        ''', true)
+
+        final WorkflowJob workflowJob = rule.createProject(WorkflowJob, 'p')
+        workflowJob.definition = flow
+        WorkflowRun run = workflowJob.scheduleBuild2(0).get();
+
+        rule.assertBuildStatus(hudson.model.Result.SUCCESS, run)
+        rule.assertLogContains("Hello from Shell", run)
     }
 }

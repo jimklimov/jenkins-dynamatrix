@@ -1,0 +1,284 @@
+# Generated from: http://localhost:9999/
+# Jenkins: 2.555.2
+# Date: 2026-05-18T02:27:54.770456130Z
+#
+# 1. Save this file as: gradle/jenkins.versions.toml
+#
+# 2. Wire it in settings.gradle.kts:
+#
+# dependencyResolutionManagement {
+#   versionCatalogs {
+#     create("jenkinsPlugins") {
+#       from(files("gradle/jenkins.versions.toml"))
+#     }
+#   }
+# }
+#
+# 3. Use it in build.gradle.kts:
+#
+# sharedLibrary {
+#   plugins {
+#     // Declare individual plugins (hyphens become dots)
+#     plugin(jenkinsPlugins.lockable.resources)
+#
+#     // OR declare the entire bundle of all plugins
+#     plugins(jenkinsPlugins.bundles.allPlugins)
+#   }
+# }
+
+[versions]
+ansicolor                          = "536.v13fa_b_860c267"
+antisamy-markup-formatter          = "173.v680e3a_b_69ff3"
+apache-httpcomponents-client4-api  = "4.5.14-269.vfa_2321039a_83"
+apache-httpcomponents-client5-api  = "5.5-170.v023de017ccd7"
+asm-api                            = "9.9.1-189.vb_5ef2964da_91"
+badge                              = "2.8"
+bootstrap5-api                     = "5.3.8-895.v4d0d8e47fea_d"
+bouncycastle-api                   = "2.30.1.83-289.v8426fcd193712"
+branch-api                         = "2.1280.v0d4e5b_b_460ef"
+caffeine-api                       = "3.2.3-194.v31a_b_f7a_b_5a_81"
+checks-api                         = "402.vca_263b_f200e3"
+cloudbees-folder                   = "6.1079.vc0975c2de294"
+commons-lang3-api                  = "3.20.0-109.ve43756e2d2b_4"
+commons-text-api                   = "1.15.0-218.va_61573470393"
+credentials                        = "1502.v5c95e620ddfe"
+credentials-binding                = "720.v3f6decef43ea_"
+dark-theme                         = "652.vea_da_dfea_e769"
+data-tables-api                    = "2.3.7-1534.v539d4edf109d"
+display-url-api                    = "2.217.va_6b_de84cc74b_"
+durable-task                       = "664.v2b_e7a_dfff66c"
+echarts-api                        = "6.0.0-1247.vf3e35a_c1813f"
+font-awesome-api                   = "7.2.0-965.ve3840b_696418"
+git                                = "5.10.1"
+git-client                         = "6.6.0"
+git-server                         = "137.ve0060b_432302"
+http-request                       = "1.25"
+instance-identity                  = "203.v15e81a_1b_7a_38"
+ionicons-api                       = "94.vcc3065403257"
+jackson-annotations2-api           = "2.21-7.v4777a_f3a_a_d47"
+jackson2-api                       = "2.21.2-433.v6d50b_92cfe52"
+jackson3-api                       = "3.1.2-71.v0a_23916945fe"
+jakarta-activation-api             = "2.1.4-1"
+jakarta-mail-api                   = "2.1.5-1"
+jakarta-xml-bind-api               = "4.0.6-12.vb_1833c1231d3"
+javax-activation-api               = "1.2.0-8"
+jaxb                               = "2.3.9-143.v5979df3304e6"
+jenkins-test-harness               = "2460.vf9c91e27b_f32"
+joda-time-api                      = "2.14.1-187.vdf2def02b_8a_1"
+jquery3-api                        = "3.7.1-619.vdb_10e002501a_"
+json-api                           = "20251224-185.v0cc18490c62c"
+junit                              = "1403.vd9d1413fd205"
+lockable-resources                 = "1493.v0db_447235039"
+mailer                             = "534.v1b_36f5864073"
+matrix-auth                        = "3.2.9"
+matrix-project                     = "870.v9db_fcfc2f45b_"
+nexus-artifact-uploader            = "2.15"
+pipeline-build-step                = "584.vdb_a_2cc3a_d07a_"
+pipeline-graph-analysis            = "254.v0f63a_a_447dca_"
+pipeline-groovy-lib                = "797.v90ea_a_9b_e45a_0"
+pipeline-input-step                = "551.vdff487c5998c"
+pipeline-milestone-step            = "152.v6e22b_8cfc66c"
+pipeline-model-api                 = "2.2277.v00573e73ddf1"
+pipeline-model-definition          = "2.2277.v00573e73ddf1"
+pipeline-model-extensions          = "2.2277.v00573e73ddf1"
+pipeline-stage-step                = "345.va_96187909426"
+pipeline-stage-tags-metadata       = "2.2277.v00573e73ddf1"
+pipeline-utility-steps             = "2.20.0"
+plain-credentials                  = "199.v9f8e1f741799"
+plugin-util-api                    = "6.1192.v30fe6e2837ff"
+prism-api                          = "1.30.0-717.vb_f8360844b_53"
+scm-api                            = "728.vc30dcf7a_0df5"
+script-security                    = "1399.ve6a_66547f6e1"
+snakeyaml-api                      = "2.5-149.v72471e9c6371"
+snakeyaml-engine-api               = "3.0.1-5.vd98ea_ff3b_92e"
+ssh-agent                          = "386.v36cc0c7582f0"
+ssh-credentials                    = "372.va_250881b_08cd"
+sshd                               = "3.353.v2b_d33c46e970"
+stapler                            = "1990.v99d303a_82457"
+structs                            = "362.va_b_695ef4fdf9"
+theme-manager                      = "346.v06cca_64c6a_37"
+timestamper                        = "1.30"
+variant                            = "70.va_d9f17f859e0"
+woodstox-core-api                  = "7.1.1-1.v4d297985f397"
+workflow-api                       = "1413.v2ff1a_5e720fa_"
+workflow-basic-steps               = "1098.v808b_fd7f8cf4"
+workflow-cps                       = "4331.v9d06ed4658ff"
+workflow-cps-global-lib            = "615.vb_b_0664a_b_19f3"
+workflow-durable-task-step         = "1475.ved562f6ec8b_3"
+workflow-job                       = "1571.vb_423c255d6d9"
+workflow-multibranch               = "821.vc3b_4ea_780798"
+workflow-scm-step                  = "466.va_d69e602552b_"
+workflow-step-api                  = "724.v538c2362b_dfb_"
+workflow-support                   = "1015.v785e5a_b_b_8b_22"
+
+[libraries]
+antisamy-markup-formatter          = { module = "org.jenkins-ci.plugins:antisamy-markup-formatter", version.ref = "antisamy-markup-formatter" }
+ansicolor                          = { module = "org.jenkins-ci.plugins:ansicolor", version.ref = "ansicolor" }
+apache-httpcomponents-client4-api  = { module = "org.jenkins-ci.plugins:apache-httpcomponents-client-4-api", version.ref = "apache-httpcomponents-client4-api" }
+apache-httpcomponents-client5-api  = { module = "io.jenkins.plugins:apache-httpcomponents-client-5-api", version.ref = "apache-httpcomponents-client5-api" }
+asm-api                            = { module = "io.jenkins.plugins:asm-api", version.ref = "asm-api" }
+badge                              = { module = "org.jenkins-ci.plugins:badge", version.ref = "badge" }
+bootstrap5-api                     = { module = "io.jenkins.plugins:bootstrap5-api", version.ref = "bootstrap5-api" }
+bouncycastle-api                   = { module = "org.jenkins-ci.plugins:bouncycastle-api", version.ref = "bouncycastle-api" }
+branch-api                         = { module = "org.jenkins-ci.plugins:branch-api", version.ref = "branch-api" }
+caffeine-api                       = { module = "io.jenkins.plugins:caffeine-api", version.ref = "caffeine-api" }
+checks-api                         = { module = "io.jenkins.plugins:checks-api", version.ref = "checks-api" }
+cloudbees-folder                   = { module = "org.jenkins-ci.plugins:cloudbees-folder", version.ref = "cloudbees-folder" }
+commons-lang3-api                  = { module = "io.jenkins.plugins:commons-lang3-api", version.ref = "commons-lang3-api" }
+commons-text-api                   = { module = "io.jenkins.plugins:commons-text-api", version.ref = "commons-text-api" }
+credentials                        = { module = "org.jenkins-ci.plugins:credentials", version.ref = "credentials" }
+credentials-binding                = { module = "org.jenkins-ci.plugins:credentials-binding", version.ref = "credentials-binding" }
+dark-theme                         = { module = "io.jenkins.plugins:dark-theme", version.ref = "dark-theme" }
+data-tables-api                    = { module = "io.jenkins.plugins:data-tables-api", version.ref = "data-tables-api" }
+display-url-api                    = { module = "org.jenkins-ci.plugins:display-url-api", version.ref = "display-url-api" }
+durable-task                       = { module = "org.jenkins-ci.plugins:durable-task", version.ref = "durable-task" }
+echarts-api                        = { module = "io.jenkins.plugins:echarts-api", version.ref = "echarts-api" }
+font-awesome-api                   = { module = "io.jenkins.plugins:font-awesome-api", version.ref = "font-awesome-api" }
+git                                = { module = "org.jenkins-ci.plugins:git", version.ref = "git" }
+git-client                         = { module = "org.jenkins-ci.plugins:git-client", version.ref = "git-client" }
+git-server                         = { module = "org.jenkins-ci.plugins:git-server", version.ref = "git-server" }
+http-request                       = { module = "org.jenkins-ci.plugins:http_request", version.ref = "http-request" }
+instance-identity                  = { module = "org.jenkins-ci.modules:instance-identity", version.ref = "instance-identity" }
+ionicons-api                       = { module = "io.jenkins.plugins:ionicons-api", version.ref = "ionicons-api" }
+jackson-annotations2-api           = { module = "io.jenkins.plugins:jackson-annotations2-api", version.ref = "jackson-annotations2-api" }
+jackson2-api                       = { module = "org.jenkins-ci.plugins:jackson2-api", version.ref = "jackson2-api" }
+jackson3-api                       = { module = "io.jenkins.plugins:jackson3-api", version.ref = "jackson3-api" }
+jakarta-activation-api             = { module = "io.jenkins.plugins:jakarta-activation-api", version.ref = "jakarta-activation-api" }
+jakarta-mail-api                   = { module = "io.jenkins.plugins:jakarta-mail-api", version.ref = "jakarta-mail-api" }
+jakarta-xml-bind-api               = { module = "io.jenkins.plugins:jakarta-xml-bind-api", version.ref = "jakarta-xml-bind-api" }
+javax-activation-api               = { module = "io.jenkins.plugins:javax-activation-api", version.ref = "javax-activation-api" }
+jaxb                               = { module = "io.jenkins.plugins:jaxb", version.ref = "jaxb" }
+jenkins-test-harness               = { module = "org.jenkins-ci.main:jenkins-test-harness", version.ref = "jenkins-test-harness" }
+joda-time-api                      = { module = "io.jenkins.plugins:joda-time-api", version.ref = "joda-time-api" }
+jquery3-api                        = { module = "io.jenkins.plugins:jquery3-api", version.ref = "jquery3-api" }
+json-api                           = { module = "io.jenkins.plugins:json-api", version.ref = "json-api" }
+junit                              = { module = "org.jenkins-ci.plugins:junit", version.ref = "junit" }
+lockable-resources                 = { module = "org.6wind.jenkins:lockable-resources", version.ref = "lockable-resources" }
+mailer                             = { module = "org.jenkins-ci.plugins:mailer", version.ref = "mailer" }
+matrix-auth                        = { module = "org.jenkins-ci.plugins:matrix-auth", version.ref = "matrix-auth" }
+matrix-project                     = { module = "org.jenkins-ci.plugins:matrix-project", version.ref = "matrix-project" }
+nexus-artifact-uploader            = { module = "sp.sd:nexus-artifact-uploader", version.ref = "nexus-artifact-uploader" }
+pipeline-build-step                = { module = "org.jenkins-ci.plugins:pipeline-build-step", version.ref = "pipeline-build-step" }
+pipeline-graph-analysis            = { module = "org.jenkins-ci.plugins:pipeline-graph-analysis", version.ref = "pipeline-graph-analysis" }
+pipeline-groovy-lib                = { module = "io.jenkins.plugins:pipeline-groovy-lib", version.ref = "pipeline-groovy-lib" }
+pipeline-input-step                = { module = "org.jenkins-ci.plugins:pipeline-input-step", version.ref = "pipeline-input-step" }
+pipeline-milestone-step            = { module = "org.jenkins-ci.plugins:pipeline-milestone-step", version.ref = "pipeline-milestone-step" }
+pipeline-model-api                 = { module = "org.jenkinsci.plugins:pipeline-model-api", version.ref = "pipeline-model-api" }
+pipeline-model-definition          = { module = "org.jenkinsci.plugins:pipeline-model-definition", version.ref = "pipeline-model-definition" }
+pipeline-model-extensions          = { module = "org.jenkinsci.plugins:pipeline-model-extensions", version.ref = "pipeline-model-extensions" }
+pipeline-stage-step                = { module = "org.jenkins-ci.plugins:pipeline-stage-step", version.ref = "pipeline-stage-step" }
+pipeline-stage-tags-metadata       = { module = "org.jenkinsci.plugins:pipeline-stage-tags-metadata", version.ref = "pipeline-stage-tags-metadata" }
+pipeline-utility-steps             = { module = "org.jenkins-ci.plugins:pipeline-utility-steps", version.ref = "pipeline-utility-steps" }
+plain-credentials                  = { module = "org.jenkins-ci.plugins:plain-credentials", version.ref = "plain-credentials" }
+plugin-util-api                    = { module = "io.jenkins.plugins:plugin-util-api", version.ref = "plugin-util-api" }
+prism-api                          = { module = "io.jenkins.plugins:prism-api", version.ref = "prism-api" }
+scm-api                            = { module = "org.jenkins-ci.plugins:scm-api", version.ref = "scm-api" }
+script-security                    = { module = "org.jenkins-ci.plugins:script-security", version.ref = "script-security" }
+snakeyaml-api                      = { module = "io.jenkins.plugins:snakeyaml-api", version.ref = "snakeyaml-api" }
+snakeyaml-engine-api               = { module = "io.jenkins.plugins:snakeyaml-engine-api", version.ref = "snakeyaml-engine-api" }
+ssh-agent                          = { module = "org.jenkins-ci.plugins:ssh-agent", version.ref = "ssh-agent" }
+ssh-credentials                    = { module = "org.jenkins-ci.plugins:ssh-credentials", version.ref = "ssh-credentials" }
+sshd                               = { module = "org.jenkins-ci.modules:sshd", version.ref = "sshd" }
+stapler                            = { module = "org.kohsuke.stapler:stapler", version.ref = "stapler" }
+structs                            = { module = "org.jenkins-ci.plugins:structs", version.ref = "structs" }
+theme-manager                      = { module = "io.jenkins.plugins:theme-manager", version.ref = "theme-manager" }
+timestamper                        = { module = "org.jenkins-ci.plugins:timestamper", version.ref = "timestamper" }
+variant                            = { module = "org.jenkins-ci.plugins:variant", version.ref = "variant" }
+woodstox-core-api                  = { module = "io.jenkins.plugins:woodstox-core-api", version.ref = "woodstox-core-api" }
+workflow-api                       = { module = "org.jenkins-ci.plugins.workflow:workflow-api", version.ref = "workflow-api" }
+workflow-basic-steps               = { module = "org.jenkins-ci.plugins.workflow:workflow-basic-steps", version.ref = "workflow-basic-steps" }
+workflow-cps                       = { module = "org.jenkins-ci.plugins.workflow:workflow-cps", version.ref = "workflow-cps" }
+workflow-cps-global-lib            = { module = "org.jenkins-ci.plugins.workflow:workflow-cps-global-lib", version.ref = "workflow-cps-global-lib" }
+workflow-durable-task-step         = { module = "org.jenkins-ci.plugins.workflow:workflow-durable-task-step", version.ref = "workflow-durable-task-step" }
+workflow-job                       = { module = "org.jenkins-ci.plugins.workflow:workflow-job", version.ref = "workflow-job" }
+workflow-multibranch               = { module = "org.jenkins-ci.plugins.workflow:workflow-multibranch", version.ref = "workflow-multibranch" }
+workflow-scm-step                  = { module = "org.jenkins-ci.plugins.workflow:workflow-scm-step", version.ref = "workflow-scm-step" }
+workflow-step-api                  = { module = "org.jenkins-ci.plugins.workflow:workflow-step-api", version.ref = "workflow-step-api" }
+workflow-support                   = { module = "org.jenkins-ci.plugins.workflow:workflow-support", version.ref = "workflow-support" }
+
+[bundles]
+allPlugins = [
+    "ansicolor",
+    "antisamy-markup-formatter",
+    "apache-httpcomponents-client4-api",
+    "apache-httpcomponents-client5-api",
+    "asm-api",
+    "badge",
+    "bootstrap5-api",
+    "bouncycastle-api",
+    "branch-api",
+    "caffeine-api",
+    "checks-api",
+    "cloudbees-folder",
+    "commons-lang3-api",
+    "commons-text-api",
+    "credentials",
+    "credentials-binding",
+    "dark-theme",
+    "data-tables-api",
+    "display-url-api",
+    "durable-task",
+    "echarts-api",
+    "font-awesome-api",
+    "git",
+    "git-client",
+    "git-server",
+    "http-request",
+    "instance-identity",
+    "ionicons-api",
+    "jackson-annotations2-api",
+    "jackson2-api",
+    "jackson3-api",
+    "jakarta-activation-api",
+    "jakarta-mail-api",
+    "jakarta-xml-bind-api",
+    "javax-activation-api",
+    "jaxb",
+    "jenkins-test-harness",
+    "joda-time-api",
+    "jquery3-api",
+    "json-api",
+    "junit",
+    "lockable-resources",
+    "mailer",
+    "matrix-auth",
+    "matrix-project",
+    "nexus-artifact-uploader",
+    "pipeline-build-step",
+    "pipeline-graph-analysis",
+    "pipeline-groovy-lib",
+    "pipeline-input-step",
+    "pipeline-milestone-step",
+    "pipeline-model-api",
+    "pipeline-model-definition",
+    "pipeline-model-extensions",
+    "pipeline-stage-step",
+    "pipeline-stage-tags-metadata",
+    "pipeline-utility-steps",
+    "plain-credentials",
+    "plugin-util-api",
+    "prism-api",
+    "scm-api",
+    "script-security",
+    "snakeyaml-api",
+    "snakeyaml-engine-api",
+    "ssh-agent",
+    "ssh-credentials",
+    "sshd",
+    "stapler",
+    "structs",
+    "theme-manager",
+    "timestamper",
+    "variant",
+    "woodstox-core-api",
+    "workflow-api",
+    "workflow-basic-steps",
+    "workflow-cps",
+    "workflow-cps-global-lib",
+    "workflow-durable-task-step",
+    "workflow-job",
+    "workflow-multibranch",
+    "workflow-scm-step",
+    "workflow-step-api",
+    "workflow-support"
+]
