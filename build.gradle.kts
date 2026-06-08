@@ -411,7 +411,7 @@ val integrationTestJunit =
         sources {
             java.setSrcDirs(listOf("test/integration-junit/java"))
             //groovy.setSrcDirs(listOf("test/integration-junit/groovy"))
-            groovy.srcDirs("test/integration-junit/groovy")
+            groovy.srcDirs("test/integration-junit/groovy", "test/integration/groovy")
         }
         dependencies {
             // Borrowing Groovy classpath from Spock, which must have it:
@@ -424,6 +424,8 @@ val integrationTestJunit =
             runtimeOnly(libs.junit.vintage.engine)
 
             // FIX: Missing libraries that cause Jenkins noise and initialization failures:
+            runtimeOnly("org.codehaus.groovy:groovy-swing:2.4.21")
+            runtimeOnly("org.codehaus.groovy:groovy-xml:2.4.21")
             //runtimeOnly("org.jenkins-ci.main:jenkins-core:${sharedLibrary.jenkins.version}")
             runtimeOnly("commons-discovery:commons-discovery:0.5")
             runtimeOnly("org.slf4j:slf4j-simple:2.0.16")
