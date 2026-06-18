@@ -1026,11 +1026,22 @@ class Dynamatrix implements Cloneable {
         }
 
         if (linePerNode) {
-            String s = ""
+            StringBuilder s = new StringBuilder()
             m.each { String node, Map<String, Integer> map ->
                 if (!s.isEmpty())
-                    s += ",\n"
-                s += "  \"${node}\": ${map}"
+                    s.append(",\n")
+
+                if (map.STARTED == map.COMPLETED)
+                    s.append(" ")
+                else
+                    s.append("*")
+
+                if (map.SUCCESS == map.COMPLETED)
+                    s.append(" ")
+                else
+                    s.append("!")
+
+                s.append("  \"${node}\": ${map}")
             }
             return "[\n${s}\n]"
         } else {
