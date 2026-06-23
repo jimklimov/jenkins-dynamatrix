@@ -496,6 +496,14 @@ val integrationTestJunit =
             // ADD THESE to support JUnit 4 tests for now:
             runtimeOnly(libs.junit.vintage.engine)
 
+            // IntelliJ IDEA infers the Groovy SDK for a module from the
+            // Groovy JAR it sees on the module's compile-visible classpath
+            // (as implementation / compileOnly). Without this line, the
+            // integration test suite only has Groovy 2.4.21 on runtimeOnly
+            // deps below (groovy-swing, groovy-xml), which IDEA ignores
+            // for SDK detection.
+            implementation("org.codehaus.groovy:groovy:2.4.21")
+
             // FIX: Missing libraries that cause Jenkins noise and initialization failures:
             runtimeOnly("org.codehaus.groovy:groovy-swing:2.4.21")
             runtimeOnly("org.codehaus.groovy:groovy-xml:2.4.21")
