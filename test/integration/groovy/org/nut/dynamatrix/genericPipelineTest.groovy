@@ -22,7 +22,7 @@ class genericPipelineTest {
 */
 
     @Test
-    void "testing env interaction, inline method definitions and standard pipeline script step calling"() {
+    void "Example testing env interaction, inline method definitions and standard pipeline script step calling"() {
         final CpsFlowDefinition flow = new CpsFlowDefinition('''
         def evenOrOdd (int n) {
             if (n % 2 == 0) {
