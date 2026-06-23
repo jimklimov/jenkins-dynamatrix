@@ -475,6 +475,13 @@ testing {
                 implementation(libs.jenkins.pipeline.unit)
             }
         }
+        // compileOnly so IDEA sees Groovy and configures the Groovy SDK for this module;
+        // the task-level groovyClasspath override is invisible during Gradle sync.
+        named<JvmTestSuite>("integrationTest") {
+            dependencies {
+                compileOnly(libs.spock.core)
+            }
+        }
     }
 }
 
