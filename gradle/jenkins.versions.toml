@@ -52,6 +52,8 @@ font-awesome-api                   = "7.2.0-965.ve3840b_696418"
 git                                = "5.10.1"
 git-client                         = "6.6.0"
 git-server                         = "137.ve0060b_432302"
+github-api                         = "1.326.v189b_7159781d"
+github-branch-source               = "1801.v98f00f07446d"
 http-request                       = "1.25"
 instance-identity                  = "203.v15e81a_1b_7a_38"
 ionicons-api                       = "94.vcc3065403257"
@@ -137,6 +139,8 @@ font-awesome-api                   = { module = "io.jenkins.plugins:font-awesome
 git                                = { module = "org.jenkins-ci.plugins:git", version.ref = "git" }
 git-client                         = { module = "org.jenkins-ci.plugins:git-client", version.ref = "git-client" }
 git-server                         = { module = "org.jenkins-ci.plugins:git-server", version.ref = "git-server" }
+github-api                         = { module = "org.jenkins-ci.plugins:github-api", version.ref = "github-api" }
+github-branch-source               = { module = "org.jenkins-ci.plugins:github-branch-source", version.ref = "github-branch-source" }
 http-request                       = { module = "org.jenkins-ci.plugins:http_request", version.ref = "http-request" }
 instance-identity                  = { module = "org.jenkins-ci.modules:instance-identity", version.ref = "instance-identity" }
 ionicons-api                       = { module = "io.jenkins.plugins:ionicons-api", version.ref = "ionicons-api" }
@@ -223,6 +227,8 @@ allPlugins = [
     "git",
     "git-client",
     "git-server",
+    "github-api",
+    "github-branch-source",
     "http-request",
     "instance-identity",
     "ionicons-api",
