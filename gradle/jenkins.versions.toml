@@ -95,7 +95,7 @@ snakeyaml-api                      = "2.5-149.v72471e9c6371"
 snakeyaml-engine-api               = "3.0.1-5.vd98ea_ff3b_92e"
 ssh-agent                          = "386.v36cc0c7582f0"
 ssh-credentials                    = "372.va_250881b_08cd"
-sshd                               = "3.353.v2b_d33c46e970"
+#sshd                               = "3.353.v2b_d33c46e970"
 stapler                            = "1990.v99d303a_82457"
 structs                            = "362.va_b_695ef4fdf9"
 theme-manager                      = "346.v06cca_64c6a_37"
@@ -182,7 +182,7 @@ snakeyaml-api                      = { module = "io.jenkins.plugins:snakeyaml-ap
 snakeyaml-engine-api               = { module = "io.jenkins.plugins:snakeyaml-engine-api", version.ref = "snakeyaml-engine-api" }
 ssh-agent                          = { module = "org.jenkins-ci.plugins:ssh-agent", version.ref = "ssh-agent" }
 ssh-credentials                    = { module = "org.jenkins-ci.plugins:ssh-credentials", version.ref = "ssh-credentials" }
-sshd                               = { module = "org.jenkins-ci.modules:sshd", version.ref = "sshd" }
+#sshd                               = { module = "org.jenkins-ci.modules:sshd", version.ref = "sshd" }
 stapler                            = { module = "org.kohsuke.stapler:stapler", version.ref = "stapler" }
 structs                            = { module = "org.jenkins-ci.plugins:structs", version.ref = "structs" }
 theme-manager                      = { module = "io.jenkins.plugins:theme-manager", version.ref = "theme-manager" }
@@ -270,7 +270,7 @@ allPlugins = [
     "snakeyaml-engine-api",
     "ssh-agent",
     "ssh-credentials",
-    "sshd",
+    #"sshd",
     "stapler",
     "structs",
     "theme-manager",
