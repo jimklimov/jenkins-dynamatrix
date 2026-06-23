@@ -7,12 +7,23 @@ import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 //import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
-import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.JenkinsRule
+import org.jvnet.hudson.test.recipes.WithTimeout;
 
 class genericPipelineTest {
 
     @Rule
     public JenkinsRule rule = new JenkinsRule()
+
+    public genericPipelineTest ()
+    {
+        // Sometimes JenkinsRule takes a long while to start,
+        // timing out (default 180s) before the actual test-case
+        // pipeline begins to run. A second test case usually
+        // succeeds as Jenkins is just about ready by then.
+        // Bump this for all cases to succeed better.
+        rule.timeout=1500;
+    }
 
 /*
     @Before
@@ -46,6 +57,7 @@ class genericPipelineTest {
 
     /** Half test, half JSL/test developer troubleshooting aid */
     @Test
+    @WithTimeout(1500)
     void "Testing list of loaded plugins"() {
         final CpsFlowDefinition flow = new CpsFlowDefinition('''
 			import jenkins.model.Jenkins
@@ -59,7 +71,7 @@ class genericPipelineTest {
             echo "=== End of list"
         ''', false)
 
-        final WorkflowJob workflowJob = rule.createProject(WorkflowJob, 'p')
+        final WorkflowJob workflowJob = rule.createProject(WorkflowJob, 'pList')
         workflowJob.definition = flow
         WorkflowRun run = workflowJob.scheduleBuild2(0).get()
 
@@ -81,6 +93,7 @@ class genericPipelineTest {
      * are on the recipe's side rather than JSL or test code base).
      */
     @Test
+    @WithTimeout(1500)
     void "Testing durable task plugin availability - sh step"() {
         final CpsFlowDefinition flow = new CpsFlowDefinition('''
             node {
@@ -88,7 +101,7 @@ class genericPipelineTest {
             }
         ''', true)
 
-        final WorkflowJob workflowJob = rule.createProject(WorkflowJob, 'p')
+        final WorkflowJob workflowJob = rule.createProject(WorkflowJob, 'pSh')
         workflowJob.definition = flow
         WorkflowRun run = workflowJob.scheduleBuild2(0).get();
 
