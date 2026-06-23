@@ -4,6 +4,11 @@ import java.io.ByteArrayOutputStream
 
 import java.net.URL
 
+import org.gradle.api.artifacts.ComponentMetadataContext
+import org.gradle.api.artifacts.ComponentMetadataRule
+import org.gradle.api.artifacts.maven.PomModuleDescriptor
+import org.gradle.api.artifacts.type.ArtifactTypeDefinition
+import org.gradle.api.attributes.Attribute
 import org.gradle.api.plugins.JavaPlugin
 import org.gradle.api.plugins.jvm.JvmTestSuite
 import org.gradle.api.plugins.quality.CodeNarc
@@ -13,6 +18,29 @@ import org.gradle.api.tasks.testing.logging.TestStackTraceFilter
 import org.gradle.kotlin.dsl.invoke
 import org.gradle.api.tasks.wrapper.Wrapper
 import org.gradle.kotlin.dsl.named
+
+// Jenkins plugin HPI artifacts may have stale Gradle module metadata that omits the
+// ARTIFACT_TYPE_ATTRIBUTE / com.mkobit.jenkins.artifact attributes.  Without these
+// attributes the mkobit plugin's artifact-view filter returns nothing and the
+// jenkinsPluginHpis configuration resolves to 0 files.
+class JenkinsHpiVariantFix : ComponentMetadataRule {
+    override fun execute(ctx: ComponentMetadataContext) {
+        val pom = ctx.getDescriptor(PomModuleDescriptor::class.java) ?: return
+        val packaging = pom.packaging
+        if (packaging != "hpi" && packaging != "jpi") return
+        val id = ctx.details.id
+        ctx.details.withVariant("runtime") {
+            attributes {
+                attribute(ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE, packaging)
+                attribute(Attribute.of("com.mkobit.jenkins.artifact", String::class.java), packaging)
+            }
+            withFiles {
+                removeAllFiles()
+                addFile("${id.name}-${id.version}.$packaging")
+            }
+        }
+    }
+}
 
 group "org.nut.dynamatrix"
 version "1.0-SNAPSHOT"
@@ -124,6 +152,9 @@ buildScan {
 */
 
 dependencies {
+    components {
+        all<JenkinsHpiVariantFix>()
+    }
     implementation(libs.jakarta.servlet.api)
 
 /*
@@ -206,6 +237,48 @@ dependencies {
   testImplementation("org.assertj:assertj-core:3.12.2")
   integrationTestImplementation(spock)
 */
+}
+
+// Jenkins test harness (UnitTestSupportingPluginManager.loadBundledPlugins) discovers plugins via
+// ClassLoader.getResource("/test-dependencies/index"), not by scanning individual HPI classpath
+// entries (that was the old URLClassLoader approach which broke on Java 9+).  The index file lists
+// plugin short names one per line; for each name the harness constructs the URL
+//   new URL(indexUrl, "<shortName>.jpi")
+// and copies the plugin archive to JENKINS_HOME/plugins/.  This is the same convention that the
+// Maven JPI plugin creates under target/test-classes/test-dependencies/.
+val prepareJenkinsTestDeps by tasks.registering {
+    val jthResDir = layout.buildDirectory.dir("jth-test-resources")
+
+    // Use a Provider<FileCollection> so doLast never captures a NamedDomainObjectProvider —
+    // capturing it caused a config-cache deserialization type-mismatch on the second run.
+    inputs.files(
+        configurations.named("jenkinsPluginHpis").map { cfg ->
+            cfg.incoming.artifactView { isLenient = true }.artifacts.artifactFiles
+        }
+    )
+    outputs.dir(jthResDir)
+
+    doLast {
+        val testDepsDir = jthResDir.get().dir("test-dependencies").asFile
+        testDepsDir.mkdirs()
+
+        val names = mutableListOf<String>()
+        inputs.files
+            .filter { it.name.endsWith(".hpi") || it.name.endsWith(".jpi") }
+            .forEach { file ->
+                // Jenkins plugin version strings always start with a digit followed by a dot
+                // (e.g. -1.5 or -4.5.14-...), so strip from the first such suffix.
+                // This correctly handles names that contain digits, e.g.
+                //   apache-httpcomponents-client-4-api-4.5.14-....hpi → apache-httpcomponents-client-4-api
+                val shortName = file.nameWithoutExtension.replace(Regex("-\\d+\\..*"), "")
+                    .ifEmpty { file.nameWithoutExtension }
+                file.copyTo(File(testDepsDir, "$shortName.jpi"), overwrite = true)
+                names.add(shortName)
+            }
+
+        File(testDepsDir, "index").writeText(names.sorted().joinToString("\n"))
+        logger.lifecycle("prepareJenkinsTestDeps: wrote ${names.size} entries to test-dependencies/index")
+    }
 }
 
 /*
@@ -548,6 +621,21 @@ tasks {
 
     check {
         dependsOn(integrationTestJunit, integrationTestSpock, integrationTestKotest)
+    }
+
+    named<Test>("integrationTestJunit") {
+        dependsOn(prepareJenkinsTestDeps)
+        classpath += files(layout.buildDirectory.dir("jth-test-resources"))
+    }
+
+    named<Test>("integrationTestSpock") {
+        dependsOn(prepareJenkinsTestDeps)
+        classpath += files(layout.buildDirectory.dir("jth-test-resources"))
+    }
+
+    named<Test>("integrationTestKotest") {
+        dependsOn(prepareJenkinsTestDeps)
+        classpath += files(layout.buildDirectory.dir("jth-test-resources"))
     }
 }
 
