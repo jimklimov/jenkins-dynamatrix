@@ -501,7 +501,7 @@ val integrationTestJunit =
             runtimeOnly(libs.junit.platform.launcher)
 
             // ADD THESE to support JUnit 4 tests for now:
-            runtimeOnly(libs.junit.vintage.engine)
+            // runtimeOnly(libs.junit.vintage.engine)
 
             // groovy-all:2.4.21 is the fat JAR (all Groovy modules in one archive).
             // Using the fat jar avoids the Java 9+ BuiltinClassLoader split-package

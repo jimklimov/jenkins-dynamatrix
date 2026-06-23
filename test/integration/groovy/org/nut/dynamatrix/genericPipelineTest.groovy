@@ -4,36 +4,22 @@ package org.nut.dynamatrix;
 import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
 import org.jenkinsci.plugins.workflow.job.WorkflowJob;
 import org.jenkinsci.plugins.workflow.job.WorkflowRun;
-//import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.jvnet.hudson.test.JenkinsRule
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
 import org.jvnet.hudson.test.recipes.WithTimeout;
 
+/**
+ * NOTE: Sometimes JenkinsRule takes a long while to start,
+ * timing out (default 180s) before the actual test-case
+ * pipeline begins to run. A second test case usually
+ * succeeds as Jenkins is just about ready by then.
+ * We bump this for all cases to succeed better.
+ */
+@WithJenkins
 class genericPipelineTest {
-
-    @Rule
-    public JenkinsRule rule = new JenkinsRule()
-
-    public genericPipelineTest ()
-    {
-        // Sometimes JenkinsRule takes a long while to start,
-        // timing out (default 180s) before the actual test-case
-        // pipeline begins to run. A second test case usually
-        // succeeds as Jenkins is just about ready by then.
-        // Bump this for all cases to succeed better.
-        rule.timeout=1500;
-    }
-
-/*
-    @Before
-    void configureGlobalGitLibraries() {
-        RuleBootstrapper.setup(rule)
-    }
-*/
-
     @Test
-    void "Example testing env interaction, inline method definitions and standard pipeline script step calling"() {
+    void "Example testing env interaction, inline method definitions and standard pipeline script step calling"(JenkinsRule rule) {
         final CpsFlowDefinition flow = new CpsFlowDefinition('''
         def evenOrOdd (int n) {
             if (n % 2 == 0) {
@@ -58,9 +44,9 @@ class genericPipelineTest {
     /** Half test, half JSL/test developer troubleshooting aid */
     @Test
     @WithTimeout(1500)
-    void "Testing list of loaded plugins"() {
+    void "Testing list of loaded plugins"(JenkinsRule rule) {
         final CpsFlowDefinition flow = new CpsFlowDefinition('''
-			import jenkins.model.Jenkins
+            //import jenkins.model.Jenkins
             def plugins = jenkins.model.Jenkins.instance.getPluginManager().getPlugins()
             echo "=== The following ${plugins?.size()} plugins are installed:"
             String l = ""
@@ -86,6 +72,7 @@ class genericPipelineTest {
         System.err.println(l + "\n=== End of list")
 
         rule.assertLogContains("durable-task", run)
+        rule.assertLogContains("Durable Task Plugin", run)
     }
 
     /** Make sure gradle setup lets us run all the integration tests
@@ -94,7 +81,7 @@ class genericPipelineTest {
      */
     @Test
     @WithTimeout(1500)
-    void "Testing durable task plugin availability - sh step"() {
+    void "Testing durable task plugin availability - sh step"(JenkinsRule rule) {
         final CpsFlowDefinition flow = new CpsFlowDefinition('''
             node {
                 sh 'echo Hello from Shell'
