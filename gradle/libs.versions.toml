@@ -9,6 +9,7 @@ foojay = "1.0.0"
 gradle-idea-ext-plugin = "1.4.1"
 jakarta-servlet = "6.1.0"
 jenkins-pipeline-unit = "1.30"
+jenkins-test-harness = "2460.vf9c91e27b_f32"
 junit-jupiter = "6.0.3"
 kotest = "6.1.11"
 kotlin = "2.3.0"
@@ -24,6 +25,7 @@ commons-discovery = { module = "commons-discovery:commons-discovery", version.re
 coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
 jakarta-servlet-api = { module = "jakarta.servlet:jakarta.servlet-api", version.ref = "jakarta-servlet" }
 jenkins-pipeline-unit = { module = "com.lesfurets:jenkins-pipeline-unit", version.ref = "jenkins-pipeline-unit" }
+jenkins-test-harness = { module = "org.jenkins-ci.main:jenkins-test-harness", version.ref = "jenkins-test-harness" }
 junit-jupiter-api = { module = "org.junit.jupiter:junit-jupiter-api", version.ref = "junit-jupiter" }
 junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit-jupiter" }
 junit-platform-launcher = { module = "org.junit.platform:junit-platform-launcher", version.ref = "junit-jupiter" }

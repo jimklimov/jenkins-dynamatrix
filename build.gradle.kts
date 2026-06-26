@@ -281,6 +281,11 @@ val prepareJenkinsTestDeps by tasks.registering {
     }
 }
 
+tasks.named<Test>("integrationTest").configure {
+    dependsOn(prepareJenkinsTestDeps)
+    classpath += files(layout.buildDirectory.dir("jth-test-resources"))
+}
+
 /*
 jenkinsIntegration {
     // For builds with IntelliJ IDEA, may have to specify location of WAR
@@ -475,11 +480,22 @@ testing {
                 implementation(libs.jenkins.pipeline.unit)
             }
         }
-        // compileOnly so IDEA sees Groovy and configures the Groovy SDK for this module;
-        // the task-level groovyClasspath override is invisible during Gradle sync.
+        // Configure the mkobit-created default suite to match integrationTestJunit:
+        // useJUnitPlatform() + harness so our JUnit 4/5 @Rule tests run properly.
         named<JvmTestSuite>("integrationTest") {
             dependencies {
+                // compileOnly so IDEA sees Groovy and configures the Groovy SDK for this module;
+                // the task-level groovyClasspath override is invisible during Gradle sync.
                 compileOnly(libs.spock.core)
+                implementation(libs.junit.jupiter.api)
+                implementation(libs.jenkins.test.harness)
+                runtimeOnly(libs.junit.jupiter.engine)
+                runtimeOnly(libs.junit.platform.launcher)
+            }
+            targets.all {
+                testTask.configure {
+                    useJUnitPlatform()
+                }
             }
         }
     }
@@ -490,8 +506,7 @@ val integrationTestJunit =
         sharedLibrary.withJenkins(this)
         sources {
             java.setSrcDirs(listOf("test/integration-junit/java"))
-            //groovy.setSrcDirs(listOf("test/integration-junit/groovy"))
-            groovy.srcDirs("test/integration-junit/groovy", "test/integration/groovy")
+            groovy.setSrcDirs(listOf("test/integration/groovy"))
         }
         dependencies {
             // Borrowing Groovy classpath from Spock, which must have it:
@@ -538,6 +553,8 @@ val integrationTestJunit =
         targets.all {
             testTask.configure {
                 useJUnitPlatform()
+                dependsOn(prepareJenkinsTestDeps)
+                classpath += files(layout.buildDirectory.dir("jth-test-resources"))
             }
         }
     }
@@ -550,6 +567,12 @@ val integrationTestSpock =
         }
         dependencies {
             implementation(libs.spock.core)
+        }
+        targets.all {
+            testTask.configure {
+                dependsOn(prepareJenkinsTestDeps)
+                classpath += files(layout.buildDirectory.dir("jth-test-resources"))
+            }
         }
     }
 
@@ -570,6 +593,8 @@ val integrationTestKotest =
         targets.all {
             testTask.configure {
                 systemProperty("kotest.framework.parallelism", kotestParallelism)
+                dependsOn(prepareJenkinsTestDeps)
+                classpath += files(layout.buildDirectory.dir("jth-test-resources"))
             }
         }
     }
@@ -635,19 +660,11 @@ tasks {
         dependsOn(integrationTestJunit, integrationTestSpock, integrationTestKotest)
     }
 
-    named<Test>("integrationTestJunit") {
-        dependsOn(prepareJenkinsTestDeps)
-        classpath += files(layout.buildDirectory.dir("jth-test-resources"))
-    }
-
-    named<Test>("integrationTestSpock") {
-        dependsOn(prepareJenkinsTestDeps)
-        classpath += files(layout.buildDirectory.dir("jth-test-resources"))
-    }
-
-    named<Test>("integrationTestKotest") {
-        dependsOn(prepareJenkinsTestDeps)
-        classpath += files(layout.buildDirectory.dir("jth-test-resources"))
+    // No unit tests exist yet (test/unit/ is absent), so wire the standard `test` task to
+    // trigger all integration suites. finalizedBy avoids a cycle with mkobit's
+    // mustRunAfter(tasks.test) constraint set on every withJenkins() suite.
+    named<Test>("test") {
+        finalizedBy(integrationTestJunit, integrationTestSpock, integrationTestKotest)
     }
 }
 
