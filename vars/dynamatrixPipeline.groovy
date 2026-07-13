@@ -1042,8 +1042,8 @@ def pipelineBody(Map dynacfgBase = [:], Map dynacfgPipeline = [:]) {
                             error "Could not investigate dynamatrix stage results"
                         }
                     } else {
-                        if (( (mapCountStages.getAt('STARTED')?:0) + (mapCountStages.getAt('RESTARTED'))?:0) != (mapCountStages.getAt('COMPLETED')?:0)
-                        ||  (mapCountStages.getAt('STARTED')?:0) < (stagesBinBuild.size() - 1)
+                        if (( (mapCountStages.getAt('STARTED')?:0) + (mapCountStages.getAt('RESTARTED')?:0) != (mapCountStages.getAt('COMPLETED')?:0) )
+                        ||  ( (mapCountStages.getAt('STARTED')?:0) < (stagesBinBuild.size() - 1) )
                         ) {
                             reportedNonSuccess = true
                             warnError(message: 'Marking a soft abort') {
