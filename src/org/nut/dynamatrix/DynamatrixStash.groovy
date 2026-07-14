@@ -475,10 +475,11 @@ class DynamatrixStash {
             script.echo "checkoutCleanSrc: scm = ${Utils.castString(scm)}"
             if (Utils.isMap(scm)
                 && scm.containsKey('$class')
-                && scm['$class'].toString() in ['GitSCM']
+                && scm['$class'].toString() in ['hudson.plugins.git.GitSCM', 'GitSCM']
             ) {
                 res = checkoutGit(script, (Map)scm, scmCommit)
             } else {
+                // Presumably here (scm instanceof GitSCM), further checked in method:
                 res = checkoutSCM(script, scm, scmCommit)
                 //res = script.checkout (scm)
             }
@@ -746,7 +747,7 @@ echo "[DEBUG] Files in `pwd`: `find . -type f | wc -l` and all FS objects under:
 
         if (!(Utils.isMap(scm)
               && scm.containsKey('$class')
-              && scm['$class'].toString() in ['GitSCM']
+              && scm['$class'].toString() in ['hudson.plugins.git.GitSCM', 'GitSCM']
              )
         && !(scm instanceof GitSCM)
         ) {
