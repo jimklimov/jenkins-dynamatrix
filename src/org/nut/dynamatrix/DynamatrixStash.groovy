@@ -318,6 +318,8 @@ class DynamatrixStash {
 // Example object name and spec (from a stacktrace): 'private final
 //   java.lang.String hudson.plugins.git.extensions.impl.CloneOption.reference'
 // with class 'java.lang.reflect.Field'
+// Note this bit (like GitSCM class itself) seems to be from git-plugin,
+// not git-client-plugin, codebase.
                                 if (extension.hasProperty('reference') && extension.reference instanceof String
                                 &&  extension.reference.trim() != refrepo.trim()
                                 ) {
