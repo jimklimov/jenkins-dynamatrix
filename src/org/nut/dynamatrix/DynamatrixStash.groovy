@@ -332,7 +332,8 @@ class DynamatrixStash {
                                     def originalReference = extension.reference
                                     script.print('checkoutSCM(GitSCM): try using reflection to replace reference: ' +
                                         originalReference +
-                                        ' with: ' + refrepo)
+                                        ' with: ' + refrepo +
+                                        ' for ' + extension.class.toString())
 
                                     // https://gist.github.com/pditommaso/263721865d84dee6ebaf
                                     field = extension.class.getDeclaredField("reference")
@@ -363,7 +364,9 @@ class DynamatrixStash {
                                         }
                                     }
                                 }
-                            }
+
+                                script.print("checkoutSCM(GitSCM): ultimate extensions[${i}] = ${Utils.castString(extensions[i])}")
+                            }   // for
                         } else {
                             script.echo "checkoutSCM(GitSCM): failed to set a custom Git refrepo: extensions field is empty (additions NOT IMPLEMENTED)"
 /*
