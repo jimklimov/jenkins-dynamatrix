@@ -217,6 +217,11 @@ class DynamatrixStash {
                                 if (!extset.containsKey('reference')) {
                                     script.echo "checkoutGit: scmParams: inject refrepo to CloneOption"
                                     extset.reference = refrepo
+                                } else {
+                                    if (extset.reference != refrepo) {
+                                        script.echo "WARNING: checkoutGit: scmParams: CloneOption already contained reference='${reference}' which differs from refrepo='${refrepo}' that we want to use, replaced"
+                                        extset.reference = refrepo
+                                    }
                                 }
                                 seenClone = true
                                 break
@@ -224,6 +229,11 @@ class DynamatrixStash {
                                 if (!extset.containsKey('reference')) {
                                     script.echo "checkoutGit: scmParams: inject refrepo to SubmoduleOption"
                                     extset.reference = refrepo
+                                } else {
+                                    if (extset.reference != refrepo) {
+                                        script.echo "WARNING: checkoutGit: scmParams: SubmoduleOption already contained reference='${reference}' which differs from refrepo='${refrepo}' that we want to use, replaced"
+                                        extset.reference = refrepo
+                                    }
                                 }
                                 seenSubmodules = true
                                 break
