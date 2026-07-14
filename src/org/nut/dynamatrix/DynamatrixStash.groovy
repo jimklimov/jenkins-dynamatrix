@@ -1003,7 +1003,11 @@ exit \$RET
     } // checkoutCleanSrcRefrepoWS()
 
     static def unstashCleanSrc(def script, String stashName) {
+        // Can be time-consuming; best done in advance outside
+        // shared lock context of checkoutCleanSrcRefrepoWS()
+        // or similar operations
         deleteWS(script)
+
         if (script?.env?.NODE_LABELS) {
             String  useMethod = null
             script.env.NODE_LABELS.split('[ \r\n\t]+').each() {String KV ->
@@ -1037,6 +1041,7 @@ exit \$RET
                     // by an earlier stashCleanSrc() with same stashName.
                     // We error out otherwise, same as would for unstash().
                     // Do benefit from local reference repo, if any (untie=false)
+
                     //script.echo "[D] unstashCleanSrc(): ${useMethod}: calling checkoutCleanSrc"
                     if (checkoutCleanSrc(script, stashName, false, stashCode[stashName]))
                         return
@@ -1054,9 +1059,6 @@ exit \$RET
                     // using this refrepo. Use locking!
                     // Do benefit from local reference repo, if any (untie=false)
 
-                    // Can be time-consuming; best done in advance outside
-                    // shared lock context of checkoutCleanSrcRefrepoWS()
-                    deleteWS(script)
                     //script.echo "[D] unstashCleanSrc(): ${useMethod}: calling checkoutCleanSrcRefrepoWS"
                     if (checkoutCleanSrcRefrepoWS(script, stashName, false) == false) {
                         script.echo "WARNING: unstashCleanSrc() asked to use 'scm-ws' but failed on node '${script?.env?.NODE_NAME}'. Falling back to 'scm'."
@@ -1073,7 +1075,7 @@ exit \$RET
                     deleteWS(script)
                     break
 
-                // case 'unstash', null, etc: fall through
+                // case 'unstash', null, etc and failures above: fall through
             }
 
             //script.echo "[D] unstashCleanSrc(): ${useMethod}: not handled"
