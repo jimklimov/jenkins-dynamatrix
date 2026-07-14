@@ -3,6 +3,7 @@ package org.nut.dynamatrix;
 import hudson.plugins.git.BranchSpec;
 import hudson.plugins.git.GitSCM;
 import hudson.plugins.git.extensions.impl.CloneOption;
+import hudson.plugins.git.extensions.impl.SubmoduleOption;
 import org.nut.dynamatrix.Utils;
 import org.nut.dynamatrix.dynamatrixGlobalState;
 
@@ -346,6 +347,21 @@ class DynamatrixStash {
                                     }
                                     field.setAccessible(true)
                                     field.set(extension, refrepo)
+
+                                    if (extension.reference.trim() != refrepo.trim()) {
+                                        script.print('checkoutSCM(GitSCM): using reflection failed, try to construct a modified clone object if we can, for ' + extension.class.toString())
+                                        if (extension instanceof CloneOption) {
+                                            def impostor = new CloneOption(extension.shallow, extension.notags, refrepo, extension.timeout)
+                                            impostor.honorRefspec = extension.honorRefspec
+                                            impostor.depth = extension.depth
+                                            extensions[i] = impostor
+                                        }
+                                        else
+                                        if (extension instanceof SubmoduleOption) {
+                                            // This class has a setReference() so we can change it directly
+                                            extension.reference = refrepo
+                                        }
+                                    }
                                 }
                             }
                         } else {
@@ -800,9 +816,13 @@ echo "[DEBUG] Files in `pwd`: `find . -type f | wc -l` and all FS objects under:
                                     break
                             } // switch
                         } // if Map with $class
-                    } else if (extset instanceof CloneOption) {
+                    }
+                    else if (extset instanceof CloneOption) {
                         // no-op for now
                     } // if CloneOption
+                    else if (extset instanceof SubmoduleOption) {
+                        // no-op for now
+                    } // if SubmoduleOption
                 } // for extset
             } // else a Map for checkout()
 
