@@ -1068,8 +1068,8 @@ def pipelineBody(Map dynacfgBase = [:], Map dynacfgPipeline = [:]) {
                         } else {
                             // Totals are as expected, but contents?..
                             // Do we have any faults recorded?
-                            if (mapCountStages.getAt('SUCCESS') + mapCountStages.getAt('RESTARTED') != mapCountStages.getAt('COMPLETED')
-                            ||  mapCountStages.getAt('SUCCESS') != (stagesBinBuild.size() - 1)
+                            if (( (mapCountStages.getAt('SUCCESS')?:0) + (mapCountStages.getAt('RESTARTED')?:0) != (mapCountStages.getAt('COMPLETED')?:0) )
+                            ||  ( (mapCountStages.getAt('SUCCESS')?:0) != (stagesBinBuild.size() - 1) )
                             ) {
                                 // Something failed and was not restarted to ultimately succeed...
                                 reportedNonSuccess = true
