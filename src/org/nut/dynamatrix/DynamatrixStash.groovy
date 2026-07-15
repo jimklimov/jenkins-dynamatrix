@@ -324,43 +324,63 @@ class DynamatrixStash {
                                 if (extension.hasProperty('reference') && extension.reference instanceof String
                                 &&  extension.reference.trim() != refrepo.trim()
                                 ) {
+                                    // Create a new copy of the extension object (we do not
+                                    // know if they are shared by multiple GitSCM objects,
+                                    // which would be playing tug of war with different
+                                    // paths placed into the same storage buckets).
+
                                     // TODO: If we have a refrepo AND scmCommit (as hash),
                                     //  check if the specified commit is known in the reference
                                     //  and if yes - just check it out from there (e.g. fudge
                                     //  the upstream repo to refrepo, then fudge back to URL).
                                     //    if (scmCommit ==~ /^[0-9a-fA-F]{40}$/) { ... }
                                     def originalReference = extension.reference
-                                    script.print('checkoutSCM(GitSCM): try using reflection to replace reference: ' +
-                                        originalReference +
-                                        ' with: ' + refrepo +
-                                        ' for ' + extension.class.toString())
 
-                                    // https://gist.github.com/pditommaso/263721865d84dee6ebaf
-                                    field = extension.class.getDeclaredField("reference")
                                     try {
-                                        // This trickery was done with Java 8, but the field does not exist
-                                        // in modern Java (trick prohibited since Java 9)
-                                        Field modifiersField = Field.class.getDeclaredField("modifiers");
-                                        modifiersField.setAccessible(true);
-                                        modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
-                                    } catch (NoSuchFieldException e) {
-                                        // no-op, just skip modifying it
-                                    }
-                                    field.setAccessible(true)
-                                    field.set(extension, refrepo)
+                                        script.print('checkoutSCM(GitSCM): try to construct a modified clone object to replace reference: ' +
+                                            originalReference +
+                                            ' with: ' + refrepo +
+                                            ' for ' + extension.class.toString())
 
-                                    if (extension.reference.trim() != refrepo.trim()) {
-                                        script.print('checkoutSCM(GitSCM): using reflection failed, try to construct a modified clone object if we can, for ' + extension.class.toString())
                                         if (extension instanceof CloneOption) {
-                                            def impostor = new CloneOption(extension.shallow, extension.notags, refrepo, extension.timeout)
+                                            CloneOption impostor = new CloneOption(extension.shallow, extension.noTags, refrepo, extension.timeout)
                                             impostor.honorRefspec = extension.honorRefspec
                                             impostor.depth = extension.depth
                                             extensions[i] = impostor
+                                        } else if (extension instanceof SubmoduleOption) {
+                                            // This class has a setReference() so we can change it directly in an object
+                                            SubmoduleOption impostor = (SubmoduleOption)extension.clone()
+                                            impostor.reference = refrepo
+                                            extensions[i] = impostor
+                                        } else {
+                                            throw new InvalidClassException("Do not know yet how to fix up " + extension.class.toString())
                                         }
-                                        else
-                                        if (extension instanceof SubmoduleOption) {
-                                            // This class has a setReference() so we can change it directly
-                                            extension.reference = refrepo
+                                    } catch (Throwable t) {
+                                        // Re-reference to be sure we modify the currently attached object
+                                        extension = extensions[i]
+
+                                        script.print('checkoutSCM(GitSCM): try using reflection to replace reference: ' +
+                                            originalReference +
+                                            ' with: ' + refrepo +
+                                            ' for ' + extension.class.toString() +
+                                            '; initial attempt failed with: ' + t.toString())
+
+                                        // https://gist.github.com/pditommaso/263721865d84dee6ebaf
+                                        field = extension.class.getDeclaredField("reference")
+                                        try {
+                                            // This trickery was done with Java 8, but the field does not exist
+                                            // in modern Java (trick prohibited since Java 9)
+                                            Field modifiersField = Field.class.getDeclaredField("modifiers");
+                                            modifiersField.setAccessible(true);
+                                            modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
+                                        } catch (NoSuchFieldException e) {
+                                            // no-op, just skip modifying it
+                                        }
+                                        field.setAccessible(true)
+                                        field.set(extension, refrepo)
+
+                                        if (extension.reference.trim() != refrepo.trim()) {
+                                            script.print('checkoutSCM(GitSCM): using reflection also failed for ' + extension.class.toString())
                                         }
                                     }
                                 }
