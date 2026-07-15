@@ -3,6 +3,7 @@ package org.nut.dynamatrix;
 import hudson.plugins.git.BranchSpec;
 import hudson.plugins.git.GitSCM;
 import hudson.plugins.git.extensions.impl.CloneOption;
+import hudson.plugins.git.extensions.impl.SubmoduleOption;
 import org.nut.dynamatrix.Utils;
 import org.nut.dynamatrix.dynamatrixGlobalState;
 
@@ -190,12 +191,12 @@ class DynamatrixStash {
      */
     static def checkoutGit(def script, Map scmParams = [:], String coRef = null) {
         if (!scmParams.containsKey('$class')) {
-            script.echo "scmParams: inject class"
+            script.echo "checkoutGit: scmParams: inject class"
             scmParams << [$class: 'GitSCM']
         }
 
         if (!scmParams.containsKey('branches') && coRef != null) {
-            script.echo "scmParams: inject branches"
+            script.echo "checkoutGit: scmParams: inject branches"
             scmParams << [branches: [[ name: coRef ]] ]
         }
 
@@ -215,15 +216,25 @@ class DynamatrixStash {
                         switch (extset['$class']) {
                             case 'CloneOption':
                                 if (!extset.containsKey('reference')) {
-                                    script.echo "scmParams: inject refrepo to cloneOption"
+                                    script.echo "checkoutGit: scmParams: inject refrepo to CloneOption"
                                     extset.reference = refrepo
+                                } else {
+                                    if (extset.reference != refrepo) {
+                                        script.echo "WARNING: checkoutGit: scmParams: CloneOption already contained reference='${reference}' which differs from refrepo='${refrepo}' that we want to use, replaced"
+                                        extset.reference = refrepo
+                                    }
                                 }
                                 seenClone = true
                                 break
                             case 'SubmoduleOption':
                                 if (!extset.containsKey('reference')) {
-                                    script.echo "scmParams: inject refrepo to submoduleOption"
+                                    script.echo "checkoutGit: scmParams: inject refrepo to SubmoduleOption"
                                     extset.reference = refrepo
+                                } else {
+                                    if (extset.reference != refrepo) {
+                                        script.echo "WARNING: checkoutGit: scmParams: SubmoduleOption already contained reference='${reference}' which differs from refrepo='${refrepo}' that we want to use, replaced"
+                                        extset.reference = refrepo
+                                    }
                                 }
                                 seenSubmodules = true
                                 break
@@ -231,15 +242,15 @@ class DynamatrixStash {
                     }
                 }
                 if (!seenClone) {
-                    script.echo "scmParams: inject refrepo to cloneOption"
+                    script.echo "checkoutGit: scmParams: inject refrepo to CloneOption"
                     scmParams.extensions += [$class: 'CloneOption', reference: refrepo]
                 }
                 if (!seenSubmodules) {
-                    script.echo "scmParams: inject refrepo to submoduleOption"
+                    script.echo "checkoutGit: scmParams: inject refrepo to SubmoduleOption"
                     scmParams.extensions += [$class: 'SubmoduleOption', reference: refrepo]
                 }
             } else {
-                script.echo "scmParams: inject extensions for refrepo"
+                script.echo "checkoutGit: scmParams: inject extensions for refrepo"
                 scmParams.extensions = [
                     [$class: 'CloneOption', reference: refrepo],
                     [$class: 'SubmoduleOption', reference: refrepo]
@@ -247,7 +258,7 @@ class DynamatrixStash {
             }
         }
 
-        script.echo "checkoutGit: running on '${script?.env?.NODE_NAME}' in '${script?.pwd()}', scmParams = ${Utils.castString(scmParams)}"
+        script.echo "checkoutGit: running checkout() step on '${script?.env?.NODE_NAME}' in '${script?.pwd()}', scmParams = ${Utils.castString(scmParams)}"
         def s = script.checkout(scmParams)
         stashSCMVars[scmParams] = s
         return s
@@ -265,7 +276,7 @@ class DynamatrixStash {
                 if (scmParams.hasProperty('branches')) {
                     if (scmParams.branches) {
 // Example: <class java.util.Collections$SingletonList>([fightwarn])
-                        script.print("has branches: ${Utils.castString(scmParams.branches)}")
+                        script.print("checkoutSCM(GitSCM): scmParams has branches: ${Utils.castString(scmParams.branches)}")
 /*
                         java.util.Collections$SingletonList newb = new java.util.Collections$SingletonList()
                         newb.add(new hudson.plugins.git.BranchSpec(coRef))
@@ -286,12 +297,12 @@ class DynamatrixStash {
                         field.set(scmParams.branches, newb)
 */
 
-                        script.print("replaced branches with: ${Utils.castString(scmParams.branches)} (WARNING: This may be ignored by later checkout(), investigating...)")
+                        script.print("checkoutSCM(GitSCM): replaced branches with: ${Utils.castString(scmParams.branches)} (WARNING: This may be ignored by later checkout(), investigating...)")
                     } else {
-                        script.echo "checkoutSCM: failed to set a custom Git checkout: branches field is empty"
+                        script.echo "checkoutSCM(GitSCM): failed to set a custom Git checkout: branches field is empty"
                     }
                 } else {
-                    script.echo "checkoutSCM: failed to set a custom Git checkout: no branches field is found"
+                    script.echo "checkoutSCM(GitSCM): failed to set a custom Git checkout: no branches field is found"
                 }
             }
 
@@ -300,44 +311,109 @@ class DynamatrixStash {
                 try {
                     if (scmParams.hasProperty('extensions')) {
                         if (scmParams.extensions) {
-                            script.print('has extensions')
+                            script.print('checkoutSCM(GitSCM): scmParams has extensions')
                             def extensions = scmParams.extensions
+                            // It is not good to replace list items while iterating
+                            // the list, so we would follow up if relevant.
+                            // For the DescribableList.replace() we would need orig/new
+                            // object references, and probably can not rely on index
+                            // numbers in the original list.
+                            Map<Integer, GitSCMExtension> extensionsOrig = [:]
+                            Map<Integer, GitSCMExtension> impostors = [:]
 
                             for (int i = 0; i < extensions.size(); i++) {
                                 def extension = extensions[i]
 // Example object name and spec (from a stacktrace): 'private final
 //   java.lang.String hudson.plugins.git.extensions.impl.CloneOption.reference'
 // with class 'java.lang.reflect.Field'
+// Note this bit (like GitSCM class itself) seems to be from git-plugin,
+// not git-client-plugin, codebase.
                                 if (extension.hasProperty('reference') && extension.reference instanceof String
                                 &&  extension.reference.trim() != refrepo.trim()
                                 ) {
+                                    // Create a new copy of the extension object (we do not
+                                    // know if they are shared by multiple GitSCM objects,
+                                    // which would be playing tug of war with different
+                                    // paths placed into the same storage buckets).
+
                                     // TODO: If we have a refrepo AND scmCommit (as hash),
                                     //  check if the specified commit is known in the reference
                                     //  and if yes - just check it out from there (e.g. fudge
                                     //  the upstream repo to refrepo, then fudge back to URL).
                                     //    if (scmCommit ==~ /^[0-9a-fA-F]{40}$/) { ... }
                                     def originalReference = extension.reference
-                                    script.print('replacing reference: ' +
-                                        originalReference +
-                                        ' with: ' + refrepo)
 
-                                    // https://gist.github.com/pditommaso/263721865d84dee6ebaf
-                                    field = extension.class.getDeclaredField("reference")
                                     try {
-                                        // This trickery was done with Java 8, but the field does not exist
-                                        // in modern Java (trick prohibited since Java 9)
-                                        Field modifiersField = Field.class.getDeclaredField("modifiers");
-                                        modifiersField.setAccessible(true);
-                                        modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
-                                    } catch (NoSuchFieldException e) {
-                                        // no-op, just skip modifying it
+                                        script.print('checkoutSCM(GitSCM): try to construct a modified clone object to replace reference: ' +
+                                            originalReference +
+                                            ' with: ' + refrepo +
+                                            ' for ' + extension.class.toString())
+
+                                        // Follow constructor and getters/setters as of git-plugin-5.9.0
+                                        if (extension instanceof CloneOption) {
+                                            CloneOption impostor = new CloneOption(extension.shallow, extension.noTags, refrepo, extension.timeout)
+                                            impostor.honorRefspec = extension.honorRefspec
+                                            impostor.depth = extension.depth
+
+                                            impostors[i] = impostor
+                                            extensionsOrig[i] = extension
+                                        } else if (extension instanceof SubmoduleOption) {
+                                            // This class has a setReference() so we can change it directly in an object
+                                            // But it does not support clone() interface
+                                            SubmoduleOption impostor = new SubmoduleOption(extension.disableSubmodules, extension.recursiveSubmodules, extension.trackingSubmodules, refrepo, extension.timeout, extension.parentCredentials)
+                                            impostor.depth = extension.depth
+                                            impostor.shallow = extension.shallow
+                                            impostor.threads = extension.threads
+
+                                            impostors[i] = impostor
+                                            extensionsOrig[i] = extension
+                                        } else {
+                                            throw new InvalidClassException("Do not know yet how to fix up " + extension.class.toString())
+                                        }
+                                    } catch (Throwable t) {
+                                        // Re-reference to be sure we modify the currently attached object
+                                        extension = extensions[i]
+                                        // Do not fix this one up later, if we recorded something and failed afterwards
+                                        impostors.remove(i)
+                                        extensionsOrig.remove(i)
+
+                                        script.print('checkoutSCM(GitSCM): try using reflection to replace reference: ' +
+                                            originalReference +
+                                            ' with: ' + refrepo +
+                                            ' for ' + extension.class.toString() +
+                                            '; initial attempt failed with: ' + t.toString())
+
+                                        // https://gist.github.com/pditommaso/263721865d84dee6ebaf
+                                        field = extension.class.getDeclaredField("reference")
+                                        try {
+                                            // This trickery was done with Java 8, but the field does not exist
+                                            // in modern Java (trick prohibited since Java 9)
+                                            Field modifiersField = Field.class.getDeclaredField("modifiers");
+                                            modifiersField.setAccessible(true);
+                                            modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
+                                        } catch (NoSuchFieldException e) {
+                                            // no-op, just skip modifying it
+                                        }
+                                        field.setAccessible(true)
+                                        field.set(extension, refrepo)
+
+                                        if (extension.reference.trim() != refrepo.trim()) {
+                                            script.print('checkoutSCM(GitSCM): using reflection also failed for ' + extension.class.toString())
+                                        }
                                     }
-                                    field.setAccessible(true)
-                                    field.set(extension, refrepo)
                                 }
+                            }   // for
+
+                            impostors.each { int i, GitSCMExtension impostor ->
+                                GitSCMExtension extension = extensionsOrig[i]
+                                extensions.replace(extension, impostor)
+                            }
+
+                            for (int i = 0; i < extensions.size(); i++) {
+                                script.print("checkoutSCM(GitSCM): ultimate extensions[${i}] = ${Utils.castString(extensions[i])}")
                             }
                         } else {
-                            script.echo "checkoutSCM: failed to set a custom Git refrepo: extensions field is empty (additions NOT IMPLEMENTED)"
+                            script.echo "checkoutSCM(GitSCM): failed to set a custom Git refrepo: extensions field is empty (additions NOT IMPLEMENTED)"
 /*
                             // Add the extensions property contents for clone and submodule
                             field = scmParams.class.getDeclaredField("extensions")
@@ -349,15 +425,15 @@ class DynamatrixStash {
 */
                         }
                     } else {
-                        script.echo "checkoutSCM: failed to set a custom Git refrepo: no extensions field found"
+                        script.echo "checkoutSCM(GitSCM): failed to set a custom Git refrepo: no extensions field found"
                     }
                 } catch (Throwable t) {
-                    script.echo "checkoutSCM: failed to set a custom Git refrepo: ${t.toString()}"
+                    script.echo "checkoutSCM(GitSCM): failed to set a custom Git refrepo: ${t.toString()}"
                 }
             }
         }
 
-        script.echo "checkoutSCM: running on '${script?.env?.NODE_NAME}' in '${script?.pwd()}', scmParams = ${Utils.castString(scmParams)}"
+        script.echo "checkoutSCM(generic): running checkout() step on '${script?.env?.NODE_NAME}' in '${script?.pwd()}', scmParams = ${Utils.castString(scmParams)}"
         def s = script.checkout(scmParams)
         stashSCMVars[scmParams] = s
         return s
@@ -465,15 +541,16 @@ class DynamatrixStash {
             script.echo "checkoutCleanSrc: scm = ${Utils.castString(scm)}"
             if (Utils.isMap(scm)
                 && scm.containsKey('$class')
-                && scm['$class'].toString() in ['GitSCM']
+                && scm['$class'].toString() in ['hudson.plugins.git.GitSCM', 'GitSCM']
             ) {
                 res = checkoutGit(script, (Map)scm, scmCommit)
             } else {
+                // Presumably here (scm instanceof GitSCM), further checked in method:
                 res = checkoutSCM(script, scm, scmCommit)
                 //res = script.checkout (scm)
             }
             if (stashName != null) {
-                script.echo "Saving scm result for ${stashName}: ${Utils.castString(res)}"
+                script.echo "checkoutCleanSrc: Saving scm result for ${stashName}: ${Utils.castString(res)}"
                 stashSCMVars[stashName] = res
             }
         } else {
@@ -736,7 +813,7 @@ echo "[DEBUG] Files in `pwd`: `find . -type f | wc -l` and all FS objects under:
 
         if (!(Utils.isMap(scm)
               && scm.containsKey('$class')
-              && scm['$class'].toString() in ['GitSCM']
+              && scm['$class'].toString() in ['hudson.plugins.git.GitSCM', 'GitSCM']
              )
         && !(scm instanceof GitSCM)
         ) {
@@ -787,9 +864,13 @@ echo "[DEBUG] Files in `pwd`: `find . -type f | wc -l` and all FS objects under:
                                     break
                             } // switch
                         } // if Map with $class
-                    } else if (extset instanceof CloneOption) {
+                    }
+                    else if (extset instanceof CloneOption) {
                         // no-op for now
                     } // if CloneOption
+                    else if (extset instanceof SubmoduleOption) {
+                        // no-op for now
+                    } // if SubmoduleOption
                 } // for extset
             } // else a Map for checkout()
 
@@ -1003,7 +1084,11 @@ exit \$RET
     } // checkoutCleanSrcRefrepoWS()
 
     static def unstashCleanSrc(def script, String stashName) {
+        // Can be time-consuming; best done in advance outside
+        // shared lock context of checkoutCleanSrcRefrepoWS()
+        // or similar operations
         deleteWS(script)
+
         if (script?.env?.NODE_LABELS) {
             String  useMethod = null
             script.env.NODE_LABELS.split('[ \r\n\t]+').each() {String KV ->
@@ -1037,6 +1122,7 @@ exit \$RET
                     // by an earlier stashCleanSrc() with same stashName.
                     // We error out otherwise, same as would for unstash().
                     // Do benefit from local reference repo, if any (untie=false)
+
                     //script.echo "[D] unstashCleanSrc(): ${useMethod}: calling checkoutCleanSrc"
                     if (checkoutCleanSrc(script, stashName, false, stashCode[stashName]))
                         return
@@ -1054,9 +1140,6 @@ exit \$RET
                     // using this refrepo. Use locking!
                     // Do benefit from local reference repo, if any (untie=false)
 
-                    // Can be time-consuming; best done in advance outside
-                    // shared lock context of checkoutCleanSrcRefrepoWS()
-                    deleteWS(script)
                     //script.echo "[D] unstashCleanSrc(): ${useMethod}: calling checkoutCleanSrcRefrepoWS"
                     if (checkoutCleanSrcRefrepoWS(script, stashName, false) == false) {
                         script.echo "WARNING: unstashCleanSrc() asked to use 'scm-ws' but failed on node '${script?.env?.NODE_NAME}'. Falling back to 'scm'."
@@ -1073,7 +1156,7 @@ exit \$RET
                     deleteWS(script)
                     break
 
-                // case 'unstash', null, etc: fall through
+                // case 'unstash', null, etc and failures above: fall through
             }
 
             //script.echo "[D] unstashCleanSrc(): ${useMethod}: not handled"
