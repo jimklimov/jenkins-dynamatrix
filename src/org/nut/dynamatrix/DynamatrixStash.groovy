@@ -313,6 +313,13 @@ class DynamatrixStash {
                         if (scmParams.extensions) {
                             script.print('checkoutSCM(GitSCM): scmParams has extensions')
                             def extensions = scmParams.extensions
+                            // It is not good to replace list items while iterating
+                            // the list, so we would follow up if relevant.
+                            // For the DescribableList.replace() we would need orig/new
+                            // object references, and probably can not rely on index
+                            // numbers in the original list.
+                            Map<Integer, GitSCMExtension> extensionsOrig = [:]
+                            Map<Integer, GitSCMExtension> impostors = [:]
 
                             for (int i = 0; i < extensions.size(); i++) {
                                 def extension = extensions[i]
@@ -346,18 +353,25 @@ class DynamatrixStash {
                                             CloneOption impostor = new CloneOption(extension.shallow, extension.noTags, refrepo, extension.timeout)
                                             impostor.honorRefspec = extension.honorRefspec
                                             impostor.depth = extension.depth
-                                            extensions[i] = impostor
+
+                                            impostors[i] = impostor
+                                            extensionsOrig[i] = extension
                                         } else if (extension instanceof SubmoduleOption) {
                                             // This class has a setReference() so we can change it directly in an object
                                             SubmoduleOption impostor = (SubmoduleOption)extension.clone()
                                             impostor.reference = refrepo
-                                            extensions[i] = impostor
+
+                                            impostors[i] = impostor
+                                            extensionsOrig[i] = extension
                                         } else {
                                             throw new InvalidClassException("Do not know yet how to fix up " + extension.class.toString())
                                         }
                                     } catch (Throwable t) {
                                         // Re-reference to be sure we modify the currently attached object
                                         extension = extensions[i]
+                                        // Do not fix this one up later, if we recorded something and failed afterwards
+                                        impostors.remove(i)
+                                        extensionsOrig.remove(i)
 
                                         script.print('checkoutSCM(GitSCM): try using reflection to replace reference: ' +
                                             originalReference +
@@ -384,9 +398,16 @@ class DynamatrixStash {
                                         }
                                     }
                                 }
-
-                                script.print("checkoutSCM(GitSCM): ultimate extensions[${i}] = ${Utils.castString(extensions[i])}")
                             }   // for
+
+                            impostors.each { int i, GitSCMExtension impostor ->
+                                GitSCMExtension extension = extensionsOrig[i]
+                                extensions.replace(extension, impostor)
+                            }
+
+                            for (int i = 0; i < extensions.size(); i++) {
+                                script.print("checkoutSCM(GitSCM): ultimate extensions[${i}] = ${Utils.castString(extensions[i])}")
+                            }
                         } else {
                             script.echo "checkoutSCM(GitSCM): failed to set a custom Git refrepo: extensions field is empty (additions NOT IMPLEMENTED)"
 /*
