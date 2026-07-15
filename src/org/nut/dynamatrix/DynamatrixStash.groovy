@@ -349,6 +349,7 @@ class DynamatrixStash {
                                             ' with: ' + refrepo +
                                             ' for ' + extension.class.toString())
 
+                                        // Follow constructor and getters/setters as of git-plugin-5.9.0
                                         if (extension instanceof CloneOption) {
                                             CloneOption impostor = new CloneOption(extension.shallow, extension.noTags, refrepo, extension.timeout)
                                             impostor.honorRefspec = extension.honorRefspec
@@ -358,8 +359,11 @@ class DynamatrixStash {
                                             extensionsOrig[i] = extension
                                         } else if (extension instanceof SubmoduleOption) {
                                             // This class has a setReference() so we can change it directly in an object
-                                            SubmoduleOption impostor = (SubmoduleOption)extension.clone()
-                                            impostor.reference = refrepo
+                                            // But it does not support clone() interface
+                                            SubmoduleOption impostor = new SubmoduleOption(extension.disableSubmodules, extension.recursiveSubmodules, extension.trackingSubmodules, refrepo, extension.timeout, extension.parentCredentials)
+                                            impostor.depth = extension.depth
+                                            impostor.shallow = extension.shallow
+                                            impostor.threads = extension.threads
 
                                             impostors[i] = impostor
                                             extensionsOrig[i] = extension
