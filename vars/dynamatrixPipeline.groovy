@@ -659,12 +659,19 @@ def pipelineBody(Map dynacfgBase = [:], Map dynacfgPipeline = [:]) {
             }
 
             def tmpRes = currentBuild.result
-            stage("Run the bigger dynamatrix (${stagesBinBuild.size() - 1} stages)") {
+            String bigStageName = "Run the bigger dynamatrix (${stagesBinBuild.size() - 1} stages)"
+            stage(bigStageName) {
                 // This parallel, unlike "par1" above, tends to
                 // preclude further processing if it fails and
                 // so avoids detailing the failure analysis
+                // It also tends to not always post the GitHub
+                // Checks verdict about the stage, leaving its
+                // status in limbo ("pending"). This may be or
+                // not be related to the size of REST API posting
+                // (log attached?)
                 warnError(message: "Not all of the 'slow build' succeeded; proceeding to analyze the results") {
                     parallel stagesBinBuild
+                    echo "FINISHED stage('${bigStageName}'): currentBuild.result was ${tmpRes} before the stage, now is ${currentBuild.result}"
                     tmpRes = currentBuild.result
                 }
             }
@@ -679,6 +686,9 @@ def pipelineBody(Map dynacfgBase = [:], Map dynacfgPipeline = [:]) {
             if (dynamatrix.mustAbort) {
                 analyzeStageName += " after fastFailSafe aborted it"
             }
+            // NOTE: sometimes a GitHub Checks update at the end of this stage
+            // does not pass through, leaving its result "pending"; may be or
+            // not be related to the size of REST API posting (log attached?)
             stage(analyzeStageName) { // TOTHINK: post{always{...}} to the above? Is there one in scripted pipeline?
                 doSummarizeIssues()
                 String mustAbortMsg = null
