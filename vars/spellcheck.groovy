@@ -14,16 +14,16 @@ import org.nut.dynamatrix.dynamatrixGlobalState;
 /*
 // Example config for this part of code:
 
-@NonCPS
-def stageNameFunc_Spellcheck(DynamatrixSingleBuildConfig dsbc) {
-    def labelMap = dsbc.getKVMap(false)
-    String sn = ""
-    if (labelMap.containsKey("OS_FAMILY"))
-        sn += labelMap.OS_FAMILY + "-"
-    if (labelMap.containsKey("OS_DISTRO"))
-        sn += labelMap.OS_DISTRO + "-"
-    return "MATRIX_TAG=\"${sn}spellcheckCustom\""
-}
+    @NonCPS
+    def stageNameFunc_Spellcheck(DynamatrixSingleBuildConfig dsbc) {
+        def labelMap = dsbc.getKVMap(false)
+        String sn = ""
+        if (labelMap.containsKey("OS_FAMILY"))
+            sn += labelMap.OS_FAMILY + "-"
+        if (labelMap.containsKey("OS_DISTRO"))
+            sn += labelMap.OS_DISTRO + "-"
+        return "MATRIX_TAG=\"${sn}spellcheckCustom\""
+    }
 
     //dynacfgPipeline['spellcheck'] = true //false
     dynacfgPipeline['spellcheck'] = [
@@ -37,7 +37,8 @@ def stageNameFunc_Spellcheck(DynamatrixSingleBuildConfig dsbc) {
 
 // Don't forget to call the sanity-checker below during pipeline init...
 // or maybe do it from the routine here?
-// Note that this code relies on more data points than just dynacfgPipeline.spellcheck.*
+// Note that this code relies on more data points than just
+// dynacfgPipeline.spellcheck.*
 
 /**
  * Check whether spellcheck is enabled in dynacfgPipeline configuration
