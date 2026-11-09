@@ -10,6 +10,9 @@ import org.nut.dynamatrix.NodeData;
 import org.nut.dynamatrix.Utils;
 import org.nut.dynamatrix.dynamatrixGlobalState;
 
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
+
 /*
 // Example config for this part of code:
 
@@ -90,11 +93,34 @@ Set<List> call(Map dynacfgPipeline = [:], Boolean returnSet = true) {
     if (isEnabled(dynacfgPipeline)) {
         if (debugTrace) this.script.println "[DEBUG] Discovering stagesQuickcheck: calling prepareDynamatrix() step..."
 
+        // Track how many hits there were for spellcheck ability,
+        // to do it at most once per node (with shell and make
+        // variability involved, there may be several different
+        // builds queued overall per node).
+        // TOTHINK: If we pick spellcheck ability by platform,
+        //  and there are several suitable nodes (while any one
+        //  suffices for us), how to ensure building on just one?
+        ConcurrentHashMap<String, AtomicLong> docSpellNodes = [:]
+        String docSpellLabel = infra.labelDocumentationSpellchecker()
+        try {
+            if (Utils.isStringNotEmpty(docSpellLabel)) {
+                try {
+                    nodesByLabel(label: docSpellLabel, offline: true).each { docSpellNodes[it.toString()] = 0 }
+                } catch (Throwable ignored) {
+                    docSpellNodes = [:]
+                }
+            }
+        } catch (Throwable t) {
+            if (dynamatrixGlobalState.enableDebugTrace) {
+                echo "quickcheck: failed to check infra.labelDocumentationSpellchecker(): ${t.getMessage()}"
+            }
+        }
+
         stagesQuickcheck_arr = prepareDynamatrix([
             dynamatrixAxesLabels: dynacfgPipeline.quickcheck.dynamatrixAxesLabels,
             mergeMode: [ 'dynamatrixAxesLabels': 'replace' ],
             stageNameFunc: dynacfgPipeline.quickcheck.stageNameFunc,
-            dynamatrixGithubNotificationContext: "quickbuild-run"
+            dynamatrixGithubNotificationContext: "quickbuild-run-quickcheck"
             ] + (dynacfgPipeline.quickcheck?.excludeCombos ? [excludeCombos: dynacfgPipeline.quickcheck?.excludeCombos,] : [:]),
             returnSet) { def delegate -> setDelegate(delegate)
                     DynamatrixSingleBuildConfig MATRIX_DSBC = delegate.dsbc
@@ -340,6 +366,31 @@ Set<List> call(Map dynacfgPipeline = [:], Boolean returnSet = true) {
                                 }
                             }
 
+                            // Without the lag of true lock{}, we might end up with a few "first match"
+                            // but this is okay-ish, better than missing a node completely.
+                            def docSpellNodesMatchFirst = false
+                            if (docSpellNodes && (env.NODE_NAME in docSpellNodes.keySet())) {
+                                if (docSpellNodes[env.NODE_NAME] == 0)
+                                    docSpellNodesMatchFirst = true
+                                docSpellNodes[env.NODE_NAME]++
+                            } else if (Utils.isStringNotEmpty(docSpellLabel) && nodeLabels.contains(docSpellLabel)) {
+                                // Not a likely hit, but just in case
+                                if (!(docSpellNodes.containsKey(env.NODE_NAME))) {
+                                    docSpellNodesMatchFirst = true
+                                    docSpellNodes[env.NODE_NAME] = 1
+                                } else {
+                                    if (docSpellNodes[env.NODE_NAME] == 0)
+                                        docSpellNodesMatchFirst = true
+                                    docSpellNodes[env.NODE_NAME]++
+                                }
+                            }
+
+                            if (aspellProg == null && docSpellNodesMatchFirst) {
+                                // Do not force any particular program name, but do run the test.
+                                // Only schedule to run once per node (whichever way it was hit).
+                                aspellProg = ""
+                            }
+
                             if (aspellProg != null) {
                                 String spCmd = (spConfig == true) ? '( \${MAKE} spellcheck )' : spConfig.toString()
                                 String stagesQuickcheckNode_key = "spellcheck for ${MATRIX_TAG}"
@@ -348,12 +399,19 @@ Set<List> call(Map dynacfgPipeline = [:], Boolean returnSet = true) {
                                         "\n  for ${Utils.castString(MATRIX_DSBC)}"
                                     Boolean didFail = true
                                     try {
-                                        withEnv(["ASPELL=${aspellProg}"]) {
+                                        Closure spBody = {
                                             withEnvOptional(dynacfgPipeline.defaultTools) {
                                                 sh """ set +x
                                                 echo "Spellcheck testing with aspell '${aspellProg}' on `uname -a || hostname || true` system"
                                                 ${spCmd}
                                                 """
+                                            }
+                                        }
+                                        if (aspellProg == "") {
+                                            spBody.call()
+                                        } else {
+                                            withEnv(["ASPELL=${aspellProg}"]) {
+                                                spBody.call()
                                             }
                                         }
                                         didFail = false
