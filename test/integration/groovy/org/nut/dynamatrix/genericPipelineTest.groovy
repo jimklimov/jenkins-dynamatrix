@@ -113,6 +113,8 @@ class genericPipelineTest {
     void "Testing durable task plugin availability - sh step"(JenkinsRule rule) {
         final CpsFlowDefinition flow = new CpsFlowDefinition('''
             node {
+                // Typically should show 'built-in' here:
+                echo "Hello from Jenkins node: ${env.NODE_NAME}"
                 sh 'echo Hello from Shell'
             }
         ''', false)
