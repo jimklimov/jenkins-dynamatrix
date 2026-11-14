@@ -172,18 +172,26 @@ class UtilsCStd {
     /**
      * Sort a collection of C or C++ standard version strings chronologically.
      *
-     * NOTE: Cannot be @NonCPS because it uses a closure comparator in list.sort()
-     * which can be serialized by CPS when this method is called from CPS context,
-     * causing "expected to call ArrayList.sort but wound up catching CpsClosure2.call"
-     * mismatch errors.
+     * Marked @NonCPS to avoid CPS serialization of the Comparator used in list.sort().
+     * When called from CPS context, Groovy closures passed to sort() would be serialized
+     * as CpsClosure2, causing "expected to call ArrayList.sort but wound up catching
+     * CpsClosure2.call" mismatch errors. Using @NonCPS with an explicit Comparator
+     * avoids this entirely.
      */
+    @NonCPS
     public static List<String> sortCStdVer(Collection versions, String lang = 'c', boolean ascending = true) {
         if (versions == null) return []
         List<String> list = new ArrayList<String>(versions.collect { it?.toString() }.findAll { isStringNotEmpty(it) })
-        list.sort { String a, String b ->
-            int cmp = compareCStdVer(a, b, lang)
-            return ascending ? cmp : -cmp
+        final String language = lang
+        final boolean asc = ascending
+        java.util.Comparator<String> comparator = new java.util.Comparator<String>() {
+            @Override
+            public int compare(String a, String b) {
+                int cmp = compareCStdVer(a, b, language)
+                return asc ? cmp : -cmp
+            }
         }
+        list.sort(comparator)
         return list
     }
 

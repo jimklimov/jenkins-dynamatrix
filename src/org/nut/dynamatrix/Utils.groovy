@@ -372,18 +372,25 @@ class Utils {
     /**
      * Sort a collection of version strings according to semantic versioning.
      *
-     * NOTE: Cannot be @NonCPS because it uses a closure comparator in list.sort()
-     * which can be serialized by CPS when this method is called from CPS context,
-     * causing "expected to call ArrayList.sort but wound up catching CpsClosure2.call"
-     * mismatch errors.
+     * Marked @NonCPS to avoid CPS serialization of the Comparator used in list.sort().
+     * When called from CPS context, Groovy closures passed to sort() would be serialized
+     * as CpsClosure2, causing "expected to call ArrayList.sort but wound up catching
+     * CpsClosure2.call" mismatch errors. Using @NonCPS with an explicit Comparator
+     * avoids this entirely.
      */
+    @NonCPS
     public static List<String> sortSemVer(Collection versions, boolean ascending = true) {
         if (versions == null) return []
         List<String> list = new ArrayList<String>(versions.collect { it?.toString() }.findAll { isStringNotEmpty(it) })
-        list.sort { String a, String b ->
-            int cmp = compareSemVer(a, b)
-            return ascending ? cmp : -cmp
+        final boolean asc = ascending
+        java.util.Comparator<String> comparator = new java.util.Comparator<String>() {
+            @Override
+            public int compare(String a, String b) {
+                int cmp = compareSemVer(a, b)
+                return asc ? cmp : -cmp
+            }
         }
+        list.sort(comparator)
         return list
     }
 
