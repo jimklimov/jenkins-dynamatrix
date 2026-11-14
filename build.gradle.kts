@@ -604,6 +604,7 @@ val integrationTestJunit =
             // Borrowing Groovy classpath from Spock, which must have it:
             compileOnly(libs.spock.core)
             implementation(libs.junit.jupiter.api)
+            implementation(libs.jenkins.test.harness)
             runtimeOnly(libs.junit.jupiter.engine)
             runtimeOnly(libs.junit.platform.launcher)
 
