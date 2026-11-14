@@ -117,7 +117,7 @@ class genericPipelineTest {
                 echo "Hello from Jenkins node: ${env.NODE_NAME}"
                 sh 'echo Hello from Shell'
             }
-        ''', false)
+        ''', true)
 
         final WorkflowJob workflowJob = rule.createProject(WorkflowJob, 'pSh')
         workflowJob.definition = flow
