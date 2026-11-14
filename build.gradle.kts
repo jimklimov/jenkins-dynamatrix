@@ -23,6 +23,14 @@ import org.gradle.kotlin.dsl.named
 // ARTIFACT_TYPE_ATTRIBUTE / com.mkobit.jenkins.artifact attributes.  Without these
 // attributes the mkobit plugin's artifact-view filter returns nothing and the
 // jenkinsPluginHpis configuration resolves to 0 files.
+//
+// Gradle's @CacheableRule descriptor cache key does NOT include global all<T>() rule class hashes.
+// When upgrading from mkobit 0.10.x (no JenkinsPluginRule) to 0.11.0 (JenkinsPluginRule added),
+// the existing descriptors for Jenkins plugins remain stale — the runtime variant still points to
+// a JAR file rather than the HPI file, and the new JENKINS_ARTIFACT_ATTRIBUTE required by the
+// 0.11.0 jenkinsPluginHpis configuration is absent. This non-cacheable companion rule runs on top
+// of any cached descriptor every build and ensures both attributes are always present, so
+// hpiFiles resolves correctly even against a pre-0.11.0 descriptor cache.
 class JenkinsHpiVariantFix : ComponentMetadataRule {
     override fun execute(ctx: ComponentMetadataContext) {
         val pom = ctx.getDescriptor(PomModuleDescriptor::class.java) ?: return
@@ -32,6 +40,9 @@ class JenkinsHpiVariantFix : ComponentMetadataRule {
         ctx.details.withVariant("runtime") {
             attributes {
                 attribute(ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE, packaging)
+                // mkobit 0.11.0 jenkinsPluginHpis requests this attribute; JenkinsPluginRule sets
+                // it only when NOT using a cached descriptor. Mirror it here so stale cache
+                // entries (from pre-0.11.0 builds) still resolve as HPI artifacts.
                 attribute(Attribute.of("com.mkobit.jenkins.artifact", String::class.java), packaging)
             }
             withFiles {
@@ -58,7 +69,7 @@ plugins {
     //id("org.openrewrite.rewrite") version "6.26.0"
     //alias(libs.plugins.openrewrite)
 
-    // Code styling and static analysis:
+    // Code styling and static analysis (see several commented-away blocks below):
 //    alias(libs.plugins.spotless)
 //    codenarc
 
@@ -721,7 +732,7 @@ idea {
 
 // https://github.com/mkobit/jenkins-pipeline-shared-libraries-gradle-plugin/issues/69
 tasks {
-    wrapper {
+    named<Wrapper>("wrapper") {
         gradleVersion = "9.4.1"
         distributionType = Wrapper.DistributionType.ALL
     }
@@ -765,6 +776,20 @@ tasks {
     // mustRunAfter(tasks.test) constraint set on every withJenkins() suite.
     named<Test>("test") {
         finalizedBy(integrationTestJunit, integrationTestSpock, integrationTestKotest)
+    }
+
+    // Ensure all custom integration test suites depend on the mock library synchronization.
+    // The default integrationTest suite has dependsOn(syncMocklibSources) set directly
+    // in its testing.suites.named("integrationTest") configuration above.
+    val syncMocklibSourcesTask = named("syncMocklibSources")
+    listOf(integrationTestJunit, integrationTestSpock, integrationTestKotest).forEach { testSuite ->
+        testSuite.configure {
+            targets.all {
+                testTask.configure {
+                    dependsOn(syncMocklibSourcesTask)
+                }
+            }
+        }
     }
 }
 
