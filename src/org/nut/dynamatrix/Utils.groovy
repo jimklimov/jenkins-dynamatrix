@@ -549,13 +549,17 @@ class Utils {
      * The method is safe to be @NonCPS because it only performs collection sorting
      * with no pipeline steps, side effects, or impure logic.<br/>
      *
-     * @param collection The collection to sort (will be sorted in-place)
-     * @return The same collection after sorting
+     * IMPORTANT: Returns a new ArrayList to match Groovy's native .sort() behavior
+     * on Sets (which also returns a new ArrayList). This is critical because
+     * Jenkins pipeline steps like withEnv() expect List&lt;String&gt; for their
+     * parameters, not Set implementations like LinkedHashSet.<br/>
+     *
+     * @param collection The collection to sort
+     * @return A new ArrayList containing the sorted elements
      */
     @NonCPS
     static Collection sortSafeForCPS(Collection collection) {
         if (collection == null) return collection
-        collection.sort()
-        return collection
+        return new ArrayList<String>(collection.sort())
     }
 }
