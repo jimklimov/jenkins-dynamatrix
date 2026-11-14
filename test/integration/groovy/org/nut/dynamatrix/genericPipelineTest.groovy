@@ -1,13 +1,13 @@
-package org.nut.dynamatrix;
+package org.nut.dynamatrix
 
 // Inspired by https://github.com/mkobit/jenkins-pipeline-shared-library-example/blob/master/test/integration/groovy/com/mkobit/libraryexample/VarsExampleJunitTest.groovy
-import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
-import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.jenkinsci.plugins.workflow.job.WorkflowRun;
-import org.junit.jupiter.api.Test;
+import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition
+import org.jenkinsci.plugins.workflow.job.WorkflowJob
+import org.jenkinsci.plugins.workflow.job.WorkflowRun
+import org.junit.jupiter.api.Test
 import org.jvnet.hudson.test.JenkinsRule
-import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
-import org.jvnet.hudson.test.recipes.WithTimeout;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins
+import org.jvnet.hudson.test.recipes.WithTimeout
 
 /**
  * NOTE: Sometimes JenkinsRule takes a long while to start,
@@ -48,6 +48,7 @@ class genericPipelineTest {
     }
 
     @Test
+    @WithTimeout(1500)
     void "Example testing env interaction, inline method definitions and standard pipeline script step calling"(JenkinsRule rule) {
         final CpsFlowDefinition flow = new CpsFlowDefinition('''
         def evenOrOdd (int n) {
@@ -98,7 +99,7 @@ class genericPipelineTest {
         plugins?.each {
             l += "${it.getDisplayName()} (${it.getShortName()}): ${it.getVersion()}\n"
         }
-        System.err.println(l + "\n=== End of list")
+        System.err.println("${l}\n=== End of list")
 
         rule.assertLogContains("durable-task", run)
         rule.assertLogContains("Durable Task Plugin", run)
