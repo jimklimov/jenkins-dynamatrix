@@ -25,6 +25,11 @@
 import hudson.AbortException;
 import org.nut.dynamatrix.dynamatrixGlobalState;
 
+/**
+ * Core wrapper logic.  Called as a method on the `sh` global variable
+ * (e.g. from `call()` or from external code that passes an explicit
+ * script/steps reference).
+ */
 def ciWrapSh(def script, Map shargs = [:]) {
     if (env?.CI_WRAP_SH) {
         echo "Executing shell step wrapped into: ${env.CI_WRAP_SH}"
@@ -33,6 +38,7 @@ def ciWrapSh(def script, Map shargs = [:]) {
 
         // Be sure homedirs for the worker are in sync, so current workspace
         // path (`pwd`) for the agent is same on the other side.
+        shargs = shargs.clone()
         shargs.script = """(echo "cd '`pwd`' || exit; " ; cat) <<'__CI_WRAP_SH_EOF__' | ${env.CI_WRAP_SH}
 ${shcmd}
 __CI_WRAP_SH_EOF__
@@ -70,7 +76,19 @@ def ciWrapSh(def script, String shcmd) {
     return ciWrapSh(script, shargs)
 }
 
+/**
+ * Entry point when the shared-library step is invoked from a Pipeline.
+ * Delegates to ciWrapSh() on this same object so CPS sees a regular
+ * method call rather than a free-standing closure.
+ */
 def call(def shargs) {
+    // Normalise argument forms so ciWrapSh always gets a Map
+    if (shargs == null) {
+        shargs = [:]
+    } else if (shargs instanceof String) {
+        shargs = [script: shargs]
+    }
+
     // refer to steps.sh for real implementation
     return ciWrapSh(steps, shargs)
 }
