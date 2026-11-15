@@ -116,7 +116,10 @@ class genericPipelineTest {
             node {
                 // Typically should show 'built-in' here:
                 echo "Hello from Jenkins node: ${env.NODE_NAME}"
-                sh 'echo Hello from Shell'
+                // NOTE: We also have a `vars/sh.groovy` wrapper for SSH-backed
+                //  nodes, but steps from vars/ seem to be poorly serializable
+                //  by test harness.
+                steps.sh 'echo "Hello from Shell (explicit reference to durable-task plugin step)"'
             }
         ''', true)
 
@@ -126,5 +129,40 @@ class genericPipelineTest {
 
         rule.assertBuildStatus(hudson.model.Result.SUCCESS, run)
         rule.assertLogContains("Hello from Shell", run)
+    }
+
+    /** Make sure gradle setup lets us run all the integration tests
+     * (some fail without prerequisites below, solutions to which
+     * are on the recipe's side rather than JSL or test code base).
+     */
+    @Test
+    @WithTimeout(1500)
+    void "Testing global vars usability - sh step"(JenkinsRule rule) {
+        final CpsFlowDefinition flow = new CpsFlowDefinition('''
+            @Library("jenkins-dynamatrix") _
+            import org.nut.dynamatrix.*
+
+            echo "Calling reportBuildCause():"
+            reportBuildCause()
+
+            echo "Calling 'sh' in a 'node':"
+            node {
+                // Typically should show 'built-in' here:
+                echo "Hello from Jenkins node: ${env.NODE_NAME}"
+                // NOTE: We also have a `vars/sh.groovy` wrapper for SSH-backed
+                //  nodes, but steps from vars/ seem to be poorly serializable
+                //  by test harness.
+                steps.sh 'echo "Hello from Shell (explicit reference to durable-task plugin step)"'
+                sh 'echo "Hello from Shell (via global variable wrapping sh step)"'
+            }
+        ''', true)
+
+        final WorkflowJob workflowJob = rule.createProject(WorkflowJob, 'pSh')
+        workflowJob.definition = flow
+        WorkflowRun run = workflowJob.scheduleBuild2(0).get();
+
+        rule.assertBuildStatus(hudson.model.Result.SUCCESS, run)
+        rule.assertLogContains("Hello from Shell", run)
+        rule.assertLogContains("global variable", run)
     }
 }
