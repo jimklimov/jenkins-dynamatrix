@@ -300,7 +300,7 @@ Map call(Dynamatrix dynamatrix, Map dynacfgPipeline, Set<String> changedFiles) {
                 //  own buildResult verdicts after the build...
                 String txt = "${sbSummary}\nfor this run ${env?.BUILD_URL} :\n\n"
                 // This maps String (stage name) to Closure, list these names:
-                stagesBinBuild.keySet().sort().each {
+                Utils.sortSafeForCPS(stagesBinBuild.keySet() as List).each {
                     txt += "${it}"
                     if (stageNameToDSBC.containsKey(it))
                         txt += "\nDSBC details : ${stageNameToDSBC[it]}"
