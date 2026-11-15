@@ -551,7 +551,7 @@ class Utils {
      *
      * IMPORTANT: Returns a new ArrayList to match Groovy's native .sort() behavior
      * on Sets (which also returns a new ArrayList). This is critical because
-     * Jenkins pipeline steps like withEnv() expect List&lt;String&gt; for their
+     * Jenkins pipeline steps like withEnv() expect List<String> for their
      * parameters, not Set implementations like LinkedHashSet.<br/>
      *
      * @param collection The collection to sort
@@ -560,6 +560,6 @@ class Utils {
     @NonCPS
     static Collection sortSafeForCPS(Collection collection) {
         if (collection == null) return collection
-        return new ArrayList<String>(collection.sort())
+        return new ArrayList(collection.sort())
     }
 }
