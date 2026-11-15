@@ -19,6 +19,35 @@ import org.jvnet.hudson.test.recipes.WithTimeout;
 @WithJenkins
 class genericPipelineTest {
     @Test
+    @WithTimeout(1500)
+    void testCStdPairSortingInPipeline(JenkinsRule rule) {
+        final CpsFlowDefinition flow = new CpsFlowDefinition('''
+            import org.nut.dynamatrix.UtilsCStd
+
+            def pairs = [
+                [c: '17', cxx: '17'],
+                [c: '99', cxx: '11'],
+                [c: '99', cxx: '98'],
+                [c: '11', cxx: '11']
+            ]
+            assert UtilsCStd.resolveExtremeCStdPairs('GCCVER=10', 'MIN', pairs, []) == [[c: '99', cxx: '98']]
+            assert UtilsCStd.resolveExtremeCStdPairs('GCCVER=10', 'MAX', pairs, []) == [[c: '17', cxx: '17']]
+            assert UtilsCStd.resolveExtremeCStdPairs('GCCVER=10', 'NOT_MIN', pairs, []) == [
+                [c: '99', cxx: '11'], [c: '11', cxx: '11'], [c: '17', cxx: '17']
+            ]
+            assert UtilsCStd.resolveExtremeCStdPairs('GCCVER=10', 'MAX',
+                [[c: '99', cxx: '98'], [c: 'MAX', cxx: 'MAX']], []) == [[c: '2y', cxx: '2c']]
+            echo 'C standard pair sorting passed'
+        '''.stripIndent(), false)
+        final WorkflowJob workflowJob = rule.createProject(WorkflowJob, 'pCStdPairs')
+        workflowJob.definition = flow
+        final WorkflowRun run = rule.buildAndAssertSuccess(workflowJob)
+
+        rule.assertLogContains('C standard pair sorting passed', run)
+        rule.assertLogNotContains('expected to call', run)
+    }
+
+    @Test
     void "Example testing env interaction, inline method definitions and standard pipeline script step calling"(JenkinsRule rule) {
         final CpsFlowDefinition flow = new CpsFlowDefinition('''
         def evenOrOdd (int n) {

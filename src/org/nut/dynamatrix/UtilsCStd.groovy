@@ -325,6 +325,15 @@ class UtilsCStd {
         return vers[0]
     }
 
+    @NonCPS
+    private static void sortCStdPairs(List<Map<String, String>> pairs) {
+        pairs.sort { Map<String, String> a, Map<String, String> b ->
+            int cmpC = compareCStdVer(a['c'], b['c'], 'c')
+            if (cmpC != 0) return cmpC
+            return compareCStdVer(a['cxx'], b['cxx'], 'cxx')
+        }
+    }
+
     /**
      * Resolve extreme paired C and C++ language standard revisions
      * (for CSTDVERSION_${KEY}) for a given compiler label and excludeCombos.
@@ -401,11 +410,7 @@ class UtilsCStd {
 
         if (supportedPairs.isEmpty()) return []
 
-        supportedPairs.sort { Map<String, String> a, Map<String, String> b ->
-            int cmpC = compareCStdVer(a['c'], b['c'], 'c')
-            if (cmpC != 0) return cmpC
-            return compareCStdVer(a['cxx'], b['cxx'], 'cxx')
-        }
+        sortCStdPairs(supportedPairs)
 
         if (!hadExtremeInCandidates) {
             if (dynamatrixGlobalState.enableDebugTraceResolver) {
