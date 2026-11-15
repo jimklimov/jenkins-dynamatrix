@@ -604,7 +604,7 @@ val integrationTestJunit =
     testing.suites.register<JvmTestSuite>("integrationTestJunit") {
         sharedLibrary.withJenkins(this)
         sources {
-            java.setSrcDirs(listOf("test/integration-junit/java"))
+            java.setSrcDirs(listOf("test/integration/java"))
             groovy.setSrcDirs(listOf("test/integration/groovy", "test/mocklib/src"))
         }
         dependencies {
