@@ -142,6 +142,23 @@ class genericPipelineTest {
             @Library("jenkins-dynamatrix") _
             import org.nut.dynamatrix.*
 
+            // The LocalLibraryRetriever (used by the mkobit Gradle plugin's
+            // auto-registration) does not set up the WorkflowScript binding
+            // that provides implicit pipeline steps (echo, sh, steps, etc.)
+            // inside vars/ scripts. When a var's call() method executes,
+            // identifiers like echo are resolved as methods on the var itself
+            // (e.g., minimalTestVar.echo()), not as pipeline steps.
+            // This causes MissingMethodException, which then cascades into
+            // NotSerializableException during CPS serialization.
+            // This is a test harness limitation, not a problem with the vars
+            // themselves -- they work correctly in production Jenkins where
+            // the proper binding is provided.
+            // A direct import of all custom global vars (~steps) helps.
+            // Also note that no Java namespace is attached to classes compiled
+            // from the global variable scripts.
+            import reportBuildCause
+            import sh
+
             echo "Calling reportBuildCause():"
             reportBuildCause()
 
