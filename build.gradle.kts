@@ -619,12 +619,13 @@ testing {
 // pure NonCPS groovy; for non-regression testing of this aspect see
 // genericPipelineTest::"Testing global vars usability - trivial step":
 tasks.named<Test>("integrationTest") {
-    // the source should no longer point to build/classes/groovy/main:
+    // the source should no longer point to build/classes/groovy/main
+    // and not use e.g. build/classes/groovy/main/myGlobalVariable.class:
     val compiledGroovyRealJSL = layout.buildDirectory.dir("classes/groovy/main")
-    val compiledGroovyMocklib = layout.buildDirectory.dir("sharedLibrarySource/jenkins-dynamatrix/vars")
+    //val compiledGroovyMocklib = layout.buildDirectory.dir("sharedLibrarySource/jenkins-dynamatrix/vars")
 
     classpath = classpath.filter {
-        (it != compiledGroovyRealJSL.get().asFile && it != compiledGroovyMocklib.get().asFile)
+        (it != compiledGroovyRealJSL.get().asFile) // && it != compiledGroovyMocklib.get().asFile)
     }
 }
 
