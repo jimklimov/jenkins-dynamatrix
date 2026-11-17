@@ -1,6 +1,8 @@
 package org.nut.dynamatrix;
 
 import com.cloudbees.groovy.cps.NonCPS;
+import org.nut.dynamatrix.DynamatrixSingleBuildConfig;
+import org.nut.dynamatrix.UtilsCStd;
 import hudson.model.Result;
 
 /**
@@ -169,6 +171,7 @@ class Utils {
      *
      * @see #cartesianSquared
      */
+    @NonCPS
     static Iterable cartesianProduct(Iterable a, Iterable b) {
         if (a.size() == 0) return b
         if (b.size() == 0) return a
@@ -368,31 +371,49 @@ class Utils {
 
     /**
      * Sort a collection of version strings according to semantic versioning.
+     *
+     * Marked @NonCPS to avoid CPS serialization of the Comparator used in list.sort().
+     * When called from CPS context, Groovy closures passed to sort() would be serialized
+     * as CpsClosure2, causing "expected to call ArrayList.sort but wound up catching
+     * CpsClosure2.call" mismatch errors. Using @NonCPS with an explicit Comparator
+     * avoids this entirely.
      */
     @NonCPS
     public static List<String> sortSemVer(Collection versions, boolean ascending = true) {
         if (versions == null) return []
         List<String> list = new ArrayList<String>(versions.collect { it?.toString() }.findAll { isStringNotEmpty(it) })
-        list.sort { String a, String b ->
-            int cmp = compareSemVer(a, b)
-            return ascending ? cmp : -cmp
+        final boolean asc = ascending
+        java.util.Comparator<String> comparator = new java.util.Comparator<String>() {
+            @Override
+            public int compare(String a, String b) {
+                int cmp = compareSemVer(a, b)
+                return asc ? cmp : -cmp
+            }
         }
+        list.sort(comparator)
         return list
     }
 
     /**
-     * Resolve MIN, MAX, NOT_MIN, !MIN, NOT_MAX, !MAX, EXTREME, EXTREMES, MIN_MAX,
-     * !EXTREME, !EXTREMES, !MIN_MAX, NOT_EXTREME, NOT_EXTREMES, or NOT_MIN_MAX
-     * semantic versions for a compiler or interpreter key, taking into
-     * account C or CXX standard version constraints and exclusion combos.<br/>
+     * Generally resolve MIN, MAX, NOT_MIN, !MIN, NOT_MAX, !MAX, EXTREME, EXTREMES,
+     * MIN_MAX, !EXTREME, !EXTREMES, !MIN_MAX, NOT_EXTREME, NOT_EXTREMES,
+     * or NOT_MIN_MAX semantic versions for a compiler or interpreter key,
+     * taking into account constraints and exclusion combos defined in
+     * {@link DynamatrixSingleBuildConfig} e.g. for C or CXX standard versions.<br/>
+     *
+     * There are additional methods for more specific support of such syntax,
+     * e.g. to compare those C/CXX standard versions according to compiler
+     * chosen in a dynamatrix cell.<br/>
      *
      * NOTE: If an agent only has one version installed, that single version
      * is simultaneously MIN and MAX, and is *not* tagged as NOT_MAX, NOT_MIN,
      * NOT_EXTREME, etc.
      *
      * @return A list of matching versions (empty list if none match).
+     *
+     * @see UtilsCStd#resolveExtremeCStdVersions
+     * @see UtilsCStd#resolveExtremeCStdPairs
      */
-    @NonCPS
     public static List<String> resolveExtremeVersions(
         String compilerKey,
         String mode,
@@ -406,18 +427,29 @@ class Utils {
 
         List<String> validVersions = []
         if (isListNotEmpty(standardConstraints) && isListNotEmpty(excludeCombos)) {
-            versions.each { String ver ->
-                boolean isExcluded = false
-                // Check if this compiler version with standard constraints hits any excludeCombos
-                DynamatrixSingleBuildConfig testDsbc = new DynamatrixSingleBuildConfig(null)
-                testDsbc.buildLabelSet = ["${compilerKey}=${ver}"] as Set
-                testDsbc.virtualLabelSet = (standardConstraints as Set)
-                if (testDsbc.matchesConstraints(excludeCombos as Set)) {
-                    isExcluded = true
+            // Only consider concrete standard constraints (e.g. CSTDVERSION=11, CSTDVERSION_c=99),
+            // ignoring extreme placeholders like MAX, MIN, NOT_MAX, etc.
+            Collection concreteConstraints = standardConstraints.findAll {
+                !(it?.toString() =~ /^CSTDVERSION(_[A-Za-z0-9]+)?=(MAX|MIN|NOT_MAX|!MAX|NOT_MIN|!MIN|EXTREME|EXTREMES|MIN_MAX|!EXTREME|!EXTREMES|!MIN_MAX|NOT_EXTREME|NOT_EXTREMES|NOT_MIN_MAX)$/)
+            }
+            if (isListNotEmpty(concreteConstraints)) {
+                versions.each { String ver ->
+                    boolean isExcluded = false
+                    // Check if this compiler/interpreter version with standard
+                    // constraints hits any excludeCombos currently defined in
+                    // the DynamatrixSingleBuildConfig class:
+                    DynamatrixSingleBuildConfig testDsbc = new DynamatrixSingleBuildConfig(null)
+                    testDsbc.buildLabelSet = ["${compilerKey}=${ver}"] as Set
+                    testDsbc.virtualLabelSet = (concreteConstraints as Set)
+                    if (testDsbc.matchesConstraints(excludeCombos as Set)) {
+                        isExcluded = true
+                    }
+                    if (!isExcluded) {
+                        validVersions << ver
+                    }
                 }
-                if (!isExcluded) {
-                    validVersions << ver
-                }
+            } else {
+                validVersions = new ArrayList<>(versions)
             }
         }
 
@@ -462,7 +494,6 @@ class Utils {
      * Resolve extreme semantic version for a compiler or interpreter key,
      * taking into account C or CXX standard version constraints and exclusion combos.
      */
-    @NonCPS
     public static String resolveExtremeVersion(
         String compilerKey,
         String mode,
@@ -484,15 +515,51 @@ class Utils {
      * ...and convert into a Map where keys are agent label expression strings.
      */
     // WARNING: NOT @NonCPS here, some code treats args as ArrayList and CPS helps it find this implementation
-    static Map<String, Set> mapBuildLabelExpressions(Set<Set> blcSet) {
+    static Map<String, Set> mapBuildLabelExpressions(Collection blcSet) {
         /** Equivalent to buildLabelsAgents in the class */
         Map<String, Set> blaMap = [:]
-        blcSet.each() {Set combo ->
-            // Note that labels can be composite, e.g. "COMPILER=GCC GCCVER=1.2.3"
-            // ble == build label expression
-            String ble = String.join('&&', combo).replaceAll('\\s+', '&&')
-            blaMap[ble] = combo
+        if (blcSet != null) {
+            blcSet.each() { def combo ->
+                if (combo == null) return
+                Collection comboColl = (combo instanceof Collection) ? combo : [combo]
+                // Note that labels can be composite, e.g. "COMPILER=GCC GCCVER=1.2.3"
+                // ble == build label expression
+                String ble = String.join('&&', comboColl).replaceAll('\\s+', '&&')
+                blaMap[ble] = comboColl as Set
+            }
         }
         return blaMap
+    }
+
+    /**
+     * Safe wrapper for sorting collections in CPS-transformed code.<br/>
+     *
+     * PROBLEM: When .sort() is called without an explicit Comparator in CPS-transformed
+     * code, Java's ArrayList.sort() uses internal closures. The CPS plugin tries to
+     * serialize these implicit closures but fails with type mismatches:
+     * <pre>
+     *   "expected to call java.util.ArrayList.sort but wound up catching CpsClosure2.call"
+     * </pre>
+     *
+     * This is similar to the removeIf() issue where Java default methods with
+     * closures cause CPS serialization conflicts (see Dynamatrix.groovy).<br/>
+     *
+     * SOLUTION: This method is marked @NonCPS, so sorting happens outside CPS
+     * transformation context, allowing Groovy's native .sort() to work safely.
+     * The method is safe to be @NonCPS because it only performs collection sorting
+     * with no pipeline steps, side effects, or impure logic.<br/>
+     *
+     * IMPORTANT: Returns a new ArrayList to match Groovy's native .sort() behavior
+     * on Sets (which also returns a new ArrayList). This is critical because
+     * Jenkins pipeline steps like withEnv() expect List<String> for their
+     * parameters, not Set implementations like LinkedHashSet.<br/>
+     *
+     * @param collection The collection to sort
+     * @return A new ArrayList containing the sorted elements
+     */
+    @NonCPS
+    static Collection sortSafeForCPS(Collection collection) {
+        if (collection == null) return collection
+        return new ArrayList(collection.sort())
     }
 }
