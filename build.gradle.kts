@@ -332,7 +332,6 @@ val syncMocklibSources by tasks.registering(Copy::class) {
         }
     }
 
-    // NOTE: No steps in mocklib so far, but just in case for future overrides:
     if (mocklibVars.isDirectory) {
         from(mocklibVars) {
             into("vars")
@@ -617,12 +616,15 @@ testing {
 
 // remove only build/classes/groovy/main from the integration-test
 // runtime classpath to avoid loading precompiled vars/*.class as
-// pure NonCPS groovy:
+// pure NonCPS groovy; for non-regression testing of this aspect see
+// genericPipelineTest::"Testing global vars usability - trivial step":
 tasks.named<Test>("integrationTest") {
-    val compiledGroovy = layout.buildDirectory.dir("classes/groovy/main")
+    // the source should no longer point to build/classes/groovy/main:
+    val compiledGroovyRealJSL = layout.buildDirectory.dir("classes/groovy/main")
+    val compiledGroovyMocklib = layout.buildDirectory.dir("sharedLibrarySource/jenkins-dynamatrix/vars")
 
     classpath = classpath.filter {
-        it != compiledGroovy.get().asFile
+        (it != compiledGroovyRealJSL.get().asFile && it != compiledGroovyMocklib.get().asFile)
     }
 }
 
