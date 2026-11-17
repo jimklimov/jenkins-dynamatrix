@@ -627,39 +627,12 @@ val groovyMainOutput =
 val filteredGroovyMain =
     layout.buildDirectory.dir("filtered-classes/groovy/main")
 
-/*
-val filterIntegrationGroovyMain =
-    tasks.register<Sync>("filterIntegrationGroovyMain") {
-        from(groovyMainOutput)
-        into(filteredGroovyMain)
-
-        // vars/*.groovy compile into the default package.
-        // Keep packaged classes from src/.
-        exclude {
-            it.relativePath.segments.size == 1 &&
-                it.name.endsWith(".class")
-        }
-    }
-
-// or more idiomatic:
-tasks.register<Sync>("filterIntegrationGroovyMain") {
-    from(tasks.named("compileGroovy").map { it.outputs.files })
-    into(filteredGroovyMain)
-
-    exclude {
-        it.relativePath.segments.size == 1 &&
-            it.name.endsWith(".class")
-    }
-}
-
-*/
-
-tasks.register<Sync>("filterIntegrationGroovyMain") {
+// Filter out default-package .class files (from vars/) so Jenkins loads
+// them from source .groovy files as CPS-serializable GlobalVariables.
+val filterIntegrationGroovyMain by tasks.registering(Sync::class) {
     dependsOn(tasks.named("compileGroovy"))
-
     from(groovyMainOutput)
     into(filteredGroovyMain)
-
     exclude {
         it.relativePath.segments.size == 1 &&
             it.name.endsWith(".class")
@@ -668,27 +641,12 @@ tasks.register<Sync>("filterIntegrationGroovyMain") {
 
 tasks.named<Test>("integrationTest") {
     dependsOn(filterIntegrationGroovyMain)
-
     val original = groovyMainOutput.get().asFile
-
     classpath = files(
         classpath.filter { it != original },
         filteredGroovyMain
     )
 }
-
-/*
-tasks.named<Test>("integrationTest") {
-    // the source should no longer point to build/classes/groovy/main
-    // and not use e.g. build/classes/groovy/main/myGlobalVariable.class:
-    val compiledGroovyRealJSL = layout.buildDirectory.dir("classes/groovy/main")
-    //val compiledGroovyMocklib = layout.buildDirectory.dir("sharedLibrarySource/jenkins-dynamatrix/vars")
-
-    classpath = classpath.filter {
-        (it != compiledGroovyRealJSL.get().asFile) // && it != compiledGroovyMocklib.get().asFile)
-    }
-}
-*/
 
 // https://github.com/JetBrains/gradle-idea-ext-plugin/issues/114
 fun org.gradle.plugins.ide.idea.model.IdeaModule.settings(configure: org.jetbrains.gradle.ext.ModuleSettings.() -> Unit) =
@@ -753,12 +711,16 @@ tasks {
     check {
         dependsOn("integrationTest")
     }
+}
 
-    // Wire the standard `test` task to also trigger the integration suite along with unit tests.
-    // finalizedBy avoids a cycle with mkobit's mustRunAfter(tasks.test) constraint.
-    named<Test>("test") {
-        finalizedBy("integrationTest")
-    }
+// Wire the standard `test` task to also trigger the integration suite along with unit tests.
+// The mkobit plugin sets mustRunAfter(test) on integrationTest, which creates a cycle
+// with finalizedBy that Gradle silently drops. Instead, we make integrationTest a
+// dependency of test via a custom task that runs both suites sequentially.
+tasks.register("allTests") {
+    description = "Runs both unit tests and integration tests"
+    group = "verification"
+    dependsOn("test", "integrationTest")
 }
 
 /*
