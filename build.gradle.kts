@@ -15,6 +15,8 @@ import org.gradle.api.plugins.quality.CodeNarc
 import org.gradle.api.tasks.compile.GroovyCompile
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.api.tasks.testing.logging.TestStackTraceFilter
+import org.gradle.api.tasks.Sync
+
 import org.gradle.api.tasks.testing.Test
 import org.gradle.kotlin.dsl.invoke
 import org.gradle.api.tasks.wrapper.Wrapper
@@ -618,6 +620,64 @@ testing {
 // runtime classpath to avoid loading precompiled vars/*.class as
 // pure NonCPS groovy; for non-regression testing of this aspect see
 // genericPipelineTest::"Testing global vars usability - trivial step":
+
+val groovyMainOutput =
+    layout.buildDirectory.dir("classes/groovy/main")
+
+val filteredGroovyMain =
+    layout.buildDirectory.dir("filtered-classes/groovy/main")
+
+/*
+val filterIntegrationGroovyMain =
+    tasks.register<Sync>("filterIntegrationGroovyMain") {
+        from(groovyMainOutput)
+        into(filteredGroovyMain)
+
+        // vars/*.groovy compile into the default package.
+        // Keep packaged classes from src/.
+        exclude {
+            it.relativePath.segments.size == 1 &&
+                it.name.endsWith(".class")
+        }
+    }
+
+// or more idiomatic:
+tasks.register<Sync>("filterIntegrationGroovyMain") {
+    from(tasks.named("compileGroovy").map { it.outputs.files })
+    into(filteredGroovyMain)
+
+    exclude {
+        it.relativePath.segments.size == 1 &&
+            it.name.endsWith(".class")
+    }
+}
+
+*/
+
+tasks.register<Sync>("filterIntegrationGroovyMain") {
+    dependsOn(tasks.named("compileGroovy"))
+
+    from(groovyMainOutput)
+    into(filteredGroovyMain)
+
+    exclude {
+        it.relativePath.segments.size == 1 &&
+            it.name.endsWith(".class")
+    }
+}
+
+tasks.named<Test>("integrationTest") {
+    dependsOn(filterIntegrationGroovyMain)
+
+    val original = groovyMainOutput.get().asFile
+
+    classpath = files(
+        classpath.filter { it != original },
+        filteredGroovyMain
+    )
+}
+
+/*
 tasks.named<Test>("integrationTest") {
     // the source should no longer point to build/classes/groovy/main
     // and not use e.g. build/classes/groovy/main/myGlobalVariable.class:
@@ -628,6 +688,7 @@ tasks.named<Test>("integrationTest") {
         (it != compiledGroovyRealJSL.get().asFile) // && it != compiledGroovyMocklib.get().asFile)
     }
 }
+*/
 
 // https://github.com/JetBrains/gradle-idea-ext-plugin/issues/114
 fun org.gradle.plugins.ide.idea.model.IdeaModule.settings(configure: org.jetbrains.gradle.ext.ModuleSettings.() -> Unit) =
