@@ -15,6 +15,7 @@ import org.gradle.api.plugins.quality.CodeNarc
 import org.gradle.api.tasks.compile.GroovyCompile
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.api.tasks.testing.logging.TestStackTraceFilter
+import org.gradle.api.tasks.testing.Test
 import org.gradle.kotlin.dsl.invoke
 import org.gradle.api.tasks.wrapper.Wrapper
 import org.gradle.kotlin.dsl.named
@@ -614,6 +615,16 @@ testing {
     }
 }
 
+// remove only build/classes/groovy/main from the integration-test
+// runtime classpath to avoid loading precompiled vars/*.class as
+// pure NonCPS groovy:
+tasks.named<Test>("integrationTest") {
+    val compiledGroovy = layout.buildDirectory.dir("classes/groovy/main")
+
+    classpath = classpath.filter {
+        it != compiledGroovy.get().asFile
+    }
+}
 
 // https://github.com/JetBrains/gradle-idea-ext-plugin/issues/114
 fun org.gradle.plugins.ide.idea.model.IdeaModule.settings(configure: org.jetbrains.gradle.ext.ModuleSettings.() -> Unit) =
