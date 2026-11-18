@@ -38,9 +38,46 @@ import org.nut.dynamatrix.TestFarmNodeData
  * - Verifies build logs for reported success, lack of exceptions,
  *   and absence of "expected to call" lines.
  * - Generates alphanumerically sorted summaries for the dynamatrix.
+ * - Compares summaries with reference files for non-regression.
  */
 @WithJenkins
 class DynamatrixPipelineTest {
+
+    /**
+     * Extract the summary line starting with "Discovered" from the build log
+     * and compare it with the reference file for non-regression.
+     * @param run The workflow run to extract the log from
+     * @param referenceFile The path to the reference file
+     */
+    private void verifySummaryAgainstReference(WorkflowRun run, String referenceFile) {
+        String log = run.getLog()
+        String summaryLine = null
+        for (String line : log.split('\n')) {
+            if (line.startsWith("Discovered ")) {
+                summaryLine = line.trim()
+                break
+            }
+        }
+        if (summaryLine == null) {
+            throw new AssertionError("No summary line found in build log")
+        }
+
+        java.io.File refFile = new java.io.File(referenceFile)
+        if (!refFile.exists()) {
+            throw new AssertionError("Reference file not found: " + referenceFile)
+        }
+
+        String expected = refFile.text.trim()
+        if (!summaryLine.equals(expected)) {
+            // Write actual output to a .actual file for inspection
+            new java.io.File(referenceFile + ".actual").text = summaryLine + '\n'
+            throw new AssertionError(
+                "Summary mismatch!\n" +
+                "Expected: " + expected + "\n" +
+                "Actual:   " + summaryLine
+            )
+        }
+    }
 
     /**
      * Register mock DumbSlave agents for the given node names.
@@ -175,6 +212,7 @@ class DynamatrixPipelineTest {
         rule.assertLogNotContains("java.lang.Error", run)
         rule.assertLogNotContains("java.lang.Exception", run)
         rule.assertLogNotContains("Closure", run)
+        verifySummaryAgainstReference(run, "test/resources/ci.slowBuildStages-list-autotools.txt")
     }
 
     // ========================================================================
@@ -270,6 +308,7 @@ class DynamatrixPipelineTest {
         rule.assertLogContains("Discovered", run)
         rule.assertLogNotContains("expected to call", run)
         rule.assertLogNotContains("Closure", run)
+        verifySummaryAgainstReference(run, "test/resources/ci.slowBuildStages-list-cibuild.txt")
     }
 
     // ========================================================================
@@ -331,6 +370,7 @@ class DynamatrixPipelineTest {
         rule.assertLogContains("SUCCESS: spellcheck legacy string test passed", run)
         rule.assertLogNotContains("expected to call", run)
         rule.assertLogNotContains("Closure", run)
+        verifySummaryAgainstReference(run, "test/resources/ci.spellcheckStages-list-legacy.txt")
     }
 
     // ========================================================================
@@ -405,6 +445,7 @@ class DynamatrixPipelineTest {
         rule.assertLogContains("SUCCESS: spellcheck closure test passed", run)
         rule.assertLogNotContains("expected to call", run)
         rule.assertLogNotContains("Closure", run)
+        verifySummaryAgainstReference(run, "test/resources/ci.spellcheckStages-list-closure.txt")
     }
 
     // ========================================================================
@@ -466,6 +507,7 @@ class DynamatrixPipelineTest {
         rule.assertLogContains("SUCCESS: shellcheck legacy string test passed", run)
         rule.assertLogNotContains("expected to call", run)
         rule.assertLogNotContains("Closure", run)
+        verifySummaryAgainstReference(run, "test/resources/ci.shellcheckStages-list-legacy.txt")
     }
 
     // ========================================================================
@@ -542,6 +584,7 @@ class DynamatrixPipelineTest {
         rule.assertLogContains("SUCCESS: shellcheck closure test passed", run)
         rule.assertLogNotContains("expected to call", run)
         rule.assertLogNotContains("Closure", run)
+        verifySummaryAgainstReference(run, "test/resources/ci.shellcheckStages-list-closure.txt")
     }
 
     // ========================================================================
@@ -604,6 +647,7 @@ class DynamatrixPipelineTest {
         rule.assertLogContains("Discovered", run)
         rule.assertLogNotContains("expected to call", run)
         rule.assertLogNotContains("Closure", run)
+        verifySummaryAgainstReference(run, "test/resources/ci.quickcheckStages-list.txt")
     }
 
     // ========================================================================
@@ -687,5 +731,6 @@ class DynamatrixPipelineTest {
         rule.assertLogContains("CONFIG #", run)
         rule.assertLogNotContains("expected to call", run)
         rule.assertLogNotContains("Closure", run)
+        verifySummaryAgainstReference(run, "test/resources/ci.slowBuildStages-list.txt")
     }
 }
