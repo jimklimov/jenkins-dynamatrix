@@ -16,7 +16,6 @@ import org.gradle.api.tasks.compile.GroovyCompile
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.api.tasks.testing.logging.TestStackTraceFilter
 import org.gradle.api.tasks.Sync
-
 import org.gradle.api.tasks.testing.Test
 import org.gradle.kotlin.dsl.invoke
 import org.gradle.api.tasks.wrapper.Wrapper
@@ -711,16 +710,13 @@ tasks {
     check {
         dependsOn("integrationTest")
     }
-}
 
-// Wire the standard `test` task to also trigger the integration suite along with unit tests.
-// The mkobit plugin sets mustRunAfter(test) on integrationTest, which creates a cycle
-// with finalizedBy that Gradle silently drops. Instead, we make integrationTest a
-// dependency of test via a custom task that runs both suites sequentially.
-tasks.register("allTests") {
-    description = "Runs both unit tests and integration tests"
-    group = "verification"
-    dependsOn("test", "integrationTest")
+    // Wire the standard `test` task to also trigger the integration suite along with unit tests.
+    // The mkobit plugin sets mustRunAfter(test) on integrationTest, which means integrationTest
+    // will run after test completes. finalizedBy ensures integrationTest runs after test finishes.
+    named<Test>("test") {
+        finalizedBy("integrationTest")
+    }
 }
 
 /*
