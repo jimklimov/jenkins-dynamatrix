@@ -131,6 +131,7 @@ configurations.named(scriptsSourceSet.compileOnlyConfigurationName) {
 
 tasks.named("codenarcIntegrationTest") { enabled = false }
 tasks.named("codenarcJenkinsMain") { enabled = false }
+tasks.named("codenarcTest") { enabled = false }
 tasks.named("codenarcMain") { enabled = false }
 
 /*
