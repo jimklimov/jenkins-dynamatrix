@@ -1,13 +1,13 @@
-package org.nut.dynamatrix;
+package org.nut.dynamatrix
 
 // Inspired by https://github.com/mkobit/jenkins-pipeline-shared-library-example/blob/master/test/integration/groovy/com/mkobit/libraryexample/VarsExampleJunitTest.groovy
-import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition;
-import org.jenkinsci.plugins.workflow.job.WorkflowJob;
-import org.jenkinsci.plugins.workflow.job.WorkflowRun;
-import org.junit.jupiter.api.Test;
+import org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition
+import org.jenkinsci.plugins.workflow.job.WorkflowJob
+import org.jenkinsci.plugins.workflow.job.WorkflowRun
+import org.junit.jupiter.api.Test
 import org.jvnet.hudson.test.JenkinsRule
-import org.jvnet.hudson.test.junit.jupiter.WithJenkins;
-import org.jvnet.hudson.test.recipes.WithTimeout;
+import org.jvnet.hudson.test.junit.jupiter.WithJenkins
+import org.jvnet.hudson.test.recipes.WithTimeout
 
 /**
  * NOTE: Sometimes JenkinsRule takes a long while to start,
@@ -48,6 +48,7 @@ class genericPipelineTest {
     }
 
     @Test
+    @WithTimeout(1500)
     void "Example testing env interaction, inline method definitions and standard pipeline script step calling"(JenkinsRule rule) {
         final CpsFlowDefinition flow = new CpsFlowDefinition('''
         def evenOrOdd (int n) {
@@ -98,7 +99,7 @@ class genericPipelineTest {
         plugins?.each {
             l += "${it.getDisplayName()} (${it.getShortName()}): ${it.getVersion()}\n"
         }
-        System.err.println(l + "\n=== End of list")
+        System.err.println("${l}\n=== End of list")
 
         rule.assertLogContains("durable-task", run)
         rule.assertLogContains("Durable Task Plugin", run)
@@ -113,7 +114,12 @@ class genericPipelineTest {
     void "Testing durable task plugin availability - sh step"(JenkinsRule rule) {
         final CpsFlowDefinition flow = new CpsFlowDefinition('''
             node {
-                sh 'echo Hello from Shell'
+                // Typically should show 'built-in' here:
+                echo "Hello from Jenkins node: ${env.NODE_NAME}"
+                // NOTE: We also have a `vars/sh.groovy` wrapper for SSH-backed
+                //  nodes, but steps from vars/ seem to be poorly serializable
+                //  by test harness.
+                steps.sh 'echo "Hello from Shell (explicit reference to durable-task plugin step)"'
             }
         ''', true)
 
@@ -123,5 +129,135 @@ class genericPipelineTest {
 
         rule.assertBuildStatus(hudson.model.Result.SUCCESS, run)
         rule.assertLogContains("Hello from Shell", run)
+    }
+
+    /** Make sure gradle setup lets us run all the integration tests
+     * (some fail without prerequisites below, solutions to which
+     * are on the recipe's side rather than JSL or test code base).
+     */
+    @Test
+    @WithTimeout(1500)
+    void "Testing global vars usability - sh step"(JenkinsRule rule) {
+        final CpsFlowDefinition flow = new CpsFlowDefinition('''
+            @Library("jenkins-dynamatrix") _
+            import org.nut.dynamatrix.*
+
+            // The LocalLibraryRetriever (used by the mkobit Gradle plugin's
+            // auto-registration) does not set up the WorkflowScript binding
+            // that provides implicit pipeline steps (echo, sh, steps, etc.)
+            // inside vars/ scripts. When a var's call() method executes,
+            // identifiers like echo are resolved as methods on the var itself
+            // (e.g., minimalTestVar.echo()), not as pipeline steps.
+            // This causes MissingMethodException, which then cascades into
+            // NotSerializableException during CPS serialization.
+            // This is a test harness limitation, not a problem with the vars
+            // themselves -- they work correctly in production Jenkins where
+            // the proper binding is provided.
+            // A direct import of all custom global vars (~steps) helps.
+            // Also note that no Java namespace is attached to classes compiled
+            // from the global variable scripts.
+            import reportBuildCause
+            import sh
+
+            echo "Calling reportBuildCause():"
+            reportBuildCause()
+
+            echo "Calling 'sh' in a 'node':"
+            node {
+                // Typically should show 'built-in' here:
+                echo "Hello from Jenkins node: ${env.NODE_NAME}"
+                // NOTE: We also have a `vars/sh.groovy` wrapper for SSH-backed
+                //  nodes, but steps from vars/ seem to be poorly serializable
+                //  by test harness.
+                steps.sh 'echo "Hello from Shell (explicit reference to durable-task plugin step)"'
+                sh 'echo "Hello from Shell (via global variable wrapping sh step)"'
+            }
+        ''', true)
+
+        final WorkflowJob workflowJob = rule.createProject(WorkflowJob, 'pSh')
+        workflowJob.definition = flow
+        WorkflowRun run = workflowJob.scheduleBuild2(0).get();
+
+        rule.assertBuildStatus(hudson.model.Result.SUCCESS, run)
+        rule.assertLogContains("Hello from Shell", run)
+        rule.assertLogContains("global variable", run)
+    }
+
+    /** Make sure the JenkinsRule instance class loader sees CPS-parsed
+     *  class code for our "global variables" ({@code vars/*.groovy}),
+     *  not the pre-compiled pure groovy (made by gradle) which lacks
+     *  the context of the {@link CpsScript} to use standard steps,
+     *  env, currentBuild etc.<br/>
+     *
+     *  In the {@code build.grade.kts} recipe we have several blocks
+     *  of code to not-copy "plain groovy" precompiled files, but
+     *  only for the global variables (lacking the java namespace),
+     *  meaning the library {@code src/...} classes should still work
+     *  (see "trivial step and class" case below).<br/>
+     *
+     *  These two tests essentially ensure non-regression of those
+     *  recipes.
+     */
+    @Test
+    @WithTimeout(1500)
+    void "Testing global vars usability - trivial step"(JenkinsRule rule) {
+        final CpsFlowDefinition flow = new CpsFlowDefinition('''
+            echo "Calling myGlobalVariableNoOp:"
+            def info = myGlobalVariableNoOp()
+            echo "Global variable runtime class: ${info}"
+
+            echo "Calling myGlobalVariable:"
+            myGlobalVariable()
+
+            echo "DONE"
+        ''', true)
+
+        final WorkflowJob workflowJob = rule.createProject(WorkflowJob, 'pSh')
+        workflowJob.definition = flow
+        WorkflowRun run = workflowJob.scheduleBuild2(0).get();
+
+        rule.assertBuildStatus(hudson.model.Result.SUCCESS, run)
+        rule.assertLogContains("myGlobalVariableNoOp:", run)
+        rule.assertLogContains("myGlobalVariable:", run)
+        rule.assertLogContains("DONE", run)
+
+        rule.assertLogNotContains("superclass:groovy.lang.Script", run)
+        rule.assertLogContains("superclass:org.jenkinsci.plugins.workflow.cps.CpsScript", run)
+    }
+
+    /** @see "Testing global vars usability - trivial step" */
+    @Test
+    @WithTimeout(1500)
+    void "Testing global vars usability - trivial step and class"(JenkinsRule rule) {
+        // Like "Testing global vars usability - trivial step" but with
+        // a call to JSL class method and non-sandboxed due to this
+        final CpsFlowDefinition flow = new CpsFlowDefinition('''
+            @Library("jenkins-dynamatrix") _
+            import org.nut.dynamatrix.*
+
+            echo "Calling myGlobalVariableNoOp:"
+            def info = myGlobalVariableNoOp()
+            echo "Global variable runtime class: ${info}"
+
+            echo "Calling myGlobalVariable:"
+            myGlobalVariable()
+
+            echo "Calling a 'real' JSL class method:"
+            echo Utils.castString(info)
+
+            echo "DONE"
+        ''', false)
+
+        final WorkflowJob workflowJob = rule.createProject(WorkflowJob, 'pSh')
+        workflowJob.definition = flow
+        WorkflowRun run = workflowJob.scheduleBuild2(0).get();
+
+        rule.assertBuildStatus(hudson.model.Result.SUCCESS, run)
+        rule.assertLogContains("myGlobalVariableNoOp:", run)
+        rule.assertLogContains("myGlobalVariable:", run)
+        rule.assertLogContains("DONE", run)
+
+        rule.assertLogNotContains("superclass:groovy.lang.Script", run)
+        rule.assertLogContains("superclass:org.jenkinsci.plugins.workflow.cps.CpsScript", run)
     }
 }

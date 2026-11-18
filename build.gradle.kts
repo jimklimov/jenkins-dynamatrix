@@ -15,6 +15,8 @@ import org.gradle.api.plugins.quality.CodeNarc
 import org.gradle.api.tasks.compile.GroovyCompile
 import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.api.tasks.testing.logging.TestStackTraceFilter
+import org.gradle.api.tasks.Sync
+import org.gradle.api.tasks.testing.Test
 import org.gradle.kotlin.dsl.invoke
 import org.gradle.api.tasks.wrapper.Wrapper
 import org.gradle.kotlin.dsl.named
@@ -23,6 +25,14 @@ import org.gradle.kotlin.dsl.named
 // ARTIFACT_TYPE_ATTRIBUTE / com.mkobit.jenkins.artifact attributes.  Without these
 // attributes the mkobit plugin's artifact-view filter returns nothing and the
 // jenkinsPluginHpis configuration resolves to 0 files.
+//
+// Gradle's @CacheableRule descriptor cache key does NOT include global all<T>() rule class hashes.
+// When upgrading from mkobit 0.10.x (no JenkinsPluginRule) to 0.11.0 (JenkinsPluginRule added),
+// the existing descriptors for Jenkins plugins remain stale — the runtime variant still points to
+// a JAR file rather than the HPI file, and the new JENKINS_ARTIFACT_ATTRIBUTE required by the
+// 0.11.0 jenkinsPluginHpis configuration is absent. This non-cacheable companion rule runs on top
+// of any cached descriptor every build and ensures both attributes are always present, so
+// hpiFiles resolves correctly even against a pre-0.11.0 descriptor cache.
 class JenkinsHpiVariantFix : ComponentMetadataRule {
     override fun execute(ctx: ComponentMetadataContext) {
         val pom = ctx.getDescriptor(PomModuleDescriptor::class.java) ?: return
@@ -32,6 +42,9 @@ class JenkinsHpiVariantFix : ComponentMetadataRule {
         ctx.details.withVariant("runtime") {
             attributes {
                 attribute(ArtifactTypeDefinition.ARTIFACT_TYPE_ATTRIBUTE, packaging)
+                // mkobit 0.11.0 jenkinsPluginHpis requests this attribute; JenkinsPluginRule sets
+                // it only when NOT using a cached descriptor. Mirror it here so stale cache
+                // entries (from pre-0.11.0 builds) still resolve as HPI artifacts.
                 attribute(Attribute.of("com.mkobit.jenkins.artifact", String::class.java), packaging)
             }
             withFiles {
@@ -58,7 +71,7 @@ plugins {
     //id("org.openrewrite.rewrite") version "6.26.0"
     //alias(libs.plugins.openrewrite)
 
-    // Code styling and static analysis:
+    // Code styling and static analysis (see several commented-away blocks below):
 //    alias(libs.plugins.spotless)
 //    codenarc
 
@@ -118,6 +131,7 @@ configurations.named(scriptsSourceSet.compileOnlyConfigurationName) {
 
 tasks.named("codenarcIntegrationTest") { enabled = false }
 tasks.named("codenarcJenkinsMain") { enabled = false }
+tasks.named("codenarcTest") { enabled = false }
 tasks.named("codenarcMain") { enabled = false }
 
 /*
@@ -281,8 +295,10 @@ val prepareJenkinsTestDeps by tasks.registering {
     }
 }
 
+// Ensure all custom integration test suites depend on the
+// mock library synchronization and other needed files.
 tasks.named<Test>("integrationTest").configure {
-    dependsOn(prepareJenkinsTestDeps)
+    dependsOn(prepareJenkinsTestDeps, syncMocklibSources)
     classpath += files(layout.buildDirectory.dir("jth-test-resources"))
 }
 
@@ -299,6 +315,54 @@ jenkinsIntegration {
     downloadDirectory.set(layout.projectDirectory.dir("resources"))
 }
 */
+
+// Hack the separated test/mocklib sources into the test sources
+// seen by JenkinsRule as if they are part of JSL itself (the "src"
+// registration setup above helps for unit testing of pure groovy,
+// not of Jenkins integration which needs to load TestFarmNodeData,
+// and that it is easiest if it were part of production JSL -- or
+// makes-believe so at testing run time).
+val mocklibBaseDir = file("test/mocklib")
+val mocklibSrc = file("${mocklibBaseDir}/src")
+val mocklibVars = file("${mocklibBaseDir}/vars")
+val mocklibResources = file("${mocklibBaseDir}/resources")
+val syncMocklibSources by tasks.registering(Copy::class) {
+    if (mocklibSrc.isDirectory) {
+        from(mocklibSrc) {
+            into("src")
+            include("**/*.groovy")
+        }
+    }
+
+    if (mocklibVars.isDirectory) {
+        from(mocklibVars) {
+            into("vars")
+            include("**/*.groovy")
+        }
+    }
+
+    /*  // No test-specific resources there yet, so commented away
+        // to avoid potential overwrite of boilerplate-dictated files
+        if (mocklibResources.isDirectory) {
+            from(mocklibResources) {
+                into("resources")
+            }
+        }
+    */
+
+    into(layout.buildDirectory.dir("sharedLibrarySource/jenkins-dynamatrix"))
+}
+
+tasks.named("syncSharedLibrarySource").configure {
+    // The mkobit plugin may have some logic of its own about this setup,
+    // so as OUR finishing touch make sure the mocklib groovy files are
+    // where we want them for the JenkinsRule integration testbeds.
+    // NOTE: The plugin defines this named task.
+    // TOTHINK: Revise with migration to mkobit 0.12.0 or later,
+    //  there is a GitHub issue that promises to solve such situations
+    //  out of the box.
+    finalizedBy(syncMocklibSources)
+}
 
 // https://github.com/mkobit/jenkins-pipeline-shared-libraries-gradle-plugin#changing-the-jenkins-lts-line
 sharedLibrary {
@@ -463,11 +527,13 @@ val kotestParallelism =
 
 testing {
     suites {
+        // Configure the mkobit-created default unit test suite.
+        // Uses JenkinsPipelineUnit for fast, no-Jenkins-runtime tests.
         named<JvmTestSuite>("test") {
             useJUnitJupiter(libs.versions.junit.jupiter)
             sources {
                 java.srcDirs("test/unit/java")
-                groovy.srcDirs("test/unit/groovy")
+                groovy.srcDirs("test/unit/groovy", "test/mocklib/src")
                 kotlin.srcDirs("test/unit/kotlin")
             }
             dependencies {
@@ -480,10 +546,25 @@ testing {
                 implementation(libs.jenkins.pipeline.unit)
             }
         }
-        // Configure the mkobit-created default suite to match integrationTestJunit:
-        // useJUnitPlatform() + harness so our JUnit 4/5 @Rule tests run properly.
+
+        // Configure the mkobit-created default integration test suite.
+        // Uses Jenkins Test Harness (JenkinsRule) with an embedded Jenkins instance.
+        //
+        // Previously (from sample mkobit shared-library project roots), a nearly-identical
+        // custom suite (integrationTestJunit) existed alongside this one.
+        // They have been consolidated: Java sources are added here, and all of the custom
+        // suites (integrationTestJunit, integrationTestSpock, integrationTestKotest) have
+        // been removed. The Spock classpath borrowing trick was used to ensure Groovy 2.4.21
+        // compilation, but groovy-all:2.4.21 is already on the compile classpath, so this
+        // suite is now self-sufficient.
         named<JvmTestSuite>("integrationTest") {
+            sources {
+                java.setSrcDirs(listOf("test/integration/java"))
+                groovy.setSrcDirs(listOf("test/integration/groovy", "test/mocklib/src"))
+            }
             dependencies {
+                // Main source output so integration tests can import classes from src/
+                implementation(sourceSets.named("main").get().output)
                 // compileOnly so IDEA sees Groovy and configures the Groovy SDK for this module;
                 // the task-level groovyClasspath override is invisible during Gradle sync.
                 compileOnly(libs.spock.core)
@@ -491,113 +572,81 @@ testing {
                 implementation(libs.jenkins.test.harness)
                 runtimeOnly(libs.junit.jupiter.engine)
                 runtimeOnly(libs.junit.platform.launcher)
+                // groovy-all:2.4.21 is the fat JAR (all Groovy modules in one archive).
+                // Using the fat jar avoids the Java 9+ BuiltinClassLoader split-package
+                // problem: having groovy.jar + groovy-swing.jar on the classpath causes
+                // the classloader to cache org.codehaus.groovy.runtime to groovy.jar and
+                // then refuse to search groovy-swing.jar for SwingGroovyMethods/Groovysh.
+                // It also makes Groovy visible to IDEA for SDK detection (implementation
+                // is compile+runtime, whereas runtimeOnly is invisible to IDEA sync).
+                implementation(libs.groovy.all)
+                //runtimeOnly("org.jenkins-ci.main:jenkins-core:${sharedLibrary.jenkins.version}")
+                runtimeOnly("commons-discovery:commons-discovery:0.5")
+                runtimeOnly("org.slf4j:slf4j-simple:2.0.16")
+                runtimeOnly(jenkinsPlugins.bouncycastle.api)
+                runtimeOnly(jenkinsPlugins.display.url.api)
+                runtimeOnly(jenkinsPlugins.scm.api)
+                runtimeOnly(jenkinsPlugins.workflow.step.api)
+                runtimeOnly(jenkinsPlugins.workflow.support)
+                runtimeOnly(jenkinsPlugins.workflow.api)
+                runtimeOnly(jenkinsPlugins.pipeline.build.step)
+                runtimeOnly(jenkinsPlugins.workflow.basic.steps)
+                runtimeOnly(jenkinsPlugins.workflow.cps)
+                runtimeOnly(jenkinsPlugins.workflow.job)
+                runtimeOnly(jenkinsPlugins.workflow.durable.task.step)
+                runtimeOnly(jenkinsPlugins.durable.task)
+                runtimeOnly(jenkinsPlugins.workflow.scm.step)
+                runtimeOnly(jenkinsPlugins.junit)
+                runtimeOnly(jenkinsPlugins.matrix.project)
+                runtimeOnly(jenkinsPlugins.branch.api)
+                runtimeOnly(jenkinsPlugins.cloudbees.folder)
+                runtimeOnly(jenkinsPlugins.structs)
+                runtimeOnly(jenkinsPlugins.script.security)
+                runtimeOnly(jenkinsPlugins.pipeline.model.definition)
+                runtimeOnly(jenkinsPlugins.credentials)
             }
             targets.all {
                 testTask.configure {
                     useJUnitPlatform()
+                    dependsOn(prepareJenkinsTestDeps, syncMocklibSources)
+                    classpath += files(layout.buildDirectory.dir("jth-test-resources"))
                 }
             }
         }
     }
 }
 
-val integrationTestJunit =
-    testing.suites.register<JvmTestSuite>("integrationTestJunit") {
-        sharedLibrary.withJenkins(this)
-        sources {
-            java.setSrcDirs(listOf("test/integration-junit/java"))
-            groovy.setSrcDirs(listOf("test/integration/groovy"))
-        }
-        dependencies {
-            // Borrowing Groovy classpath from Spock, which must have it:
-            compileOnly(libs.spock.core)
-            implementation(libs.junit.jupiter.api)
-            runtimeOnly(libs.junit.jupiter.engine)
-            runtimeOnly(libs.junit.platform.launcher)
+// remove only build/classes/groovy/main from the integration-test
+// runtime classpath to avoid loading precompiled vars/*.class as
+// pure NonCPS groovy; for non-regression testing of this aspect see
+// genericPipelineTest::"Testing global vars usability - trivial step":
 
-            // ADD THESE to support JUnit 4 tests for now:
-            // runtimeOnly(libs.junit.vintage.engine)
+val groovyMainOutput =
+    layout.buildDirectory.dir("classes/groovy/main")
 
-            // groovy-all:2.4.21 is the fat JAR (all Groovy modules in one archive).
-            // Using the fat jar avoids the Java 9+ BuiltinClassLoader split-package
-            // problem: having groovy.jar + groovy-swing.jar on the classpath causes
-            // the classloader to cache org.codehaus.groovy.runtime to groovy.jar and
-            // then refuse to search groovy-swing.jar for SwingGroovyMethods/Groovysh.
-            // It also makes Groovy visible to IDEA for SDK detection (implementation
-            // is compile+runtime, whereas runtimeOnly is invisible to IDEA sync).
-            implementation(libs.groovy.all)
-            //runtimeOnly("org.jenkins-ci.main:jenkins-core:${sharedLibrary.jenkins.version}")
-            runtimeOnly("commons-discovery:commons-discovery:0.5")
-            runtimeOnly("org.slf4j:slf4j-simple:2.0.16")
-            runtimeOnly(jenkinsPlugins.bouncycastle.api)
-            runtimeOnly(jenkinsPlugins.display.url.api)
-            runtimeOnly(jenkinsPlugins.scm.api)
-            runtimeOnly(jenkinsPlugins.workflow.step.api)
-            runtimeOnly(jenkinsPlugins.workflow.support)
-            runtimeOnly(jenkinsPlugins.workflow.api)
-            runtimeOnly(jenkinsPlugins.workflow.basic.steps)
-            runtimeOnly(jenkinsPlugins.workflow.cps)
-            runtimeOnly(jenkinsPlugins.workflow.job)
-            runtimeOnly(jenkinsPlugins.workflow.durable.task.step)
-            runtimeOnly(jenkinsPlugins.durable.task)
-            runtimeOnly(jenkinsPlugins.workflow.scm.step)
-            runtimeOnly(jenkinsPlugins.junit)
-            runtimeOnly(jenkinsPlugins.matrix.project)
-            runtimeOnly(jenkinsPlugins.branch.api)
-            runtimeOnly(jenkinsPlugins.cloudbees.folder)
-            runtimeOnly(jenkinsPlugins.structs)
-            runtimeOnly(jenkinsPlugins.script.security)
-            runtimeOnly(jenkinsPlugins.pipeline.model.definition)
-            runtimeOnly(jenkinsPlugins.credentials)
-        }
-        targets.all {
-            testTask.configure {
-                useJUnitPlatform()
-                dependsOn(prepareJenkinsTestDeps)
-                classpath += files(layout.buildDirectory.dir("jth-test-resources"))
-            }
-        }
+val filteredGroovyMain =
+    layout.buildDirectory.dir("filtered-classes/groovy/main")
+
+// Filter out default-package .class files (from vars/) so Jenkins loads
+// them from source .groovy files as CPS-serializable GlobalVariables.
+val filterIntegrationGroovyMain by tasks.registering(Sync::class) {
+    dependsOn(tasks.named("compileGroovy"))
+    from(groovyMainOutput)
+    into(filteredGroovyMain)
+    exclude {
+        it.relativePath.segments.size == 1 &&
+            it.name.endsWith(".class")
     }
+}
 
-val integrationTestSpock =
-    testing.suites.register<JvmTestSuite>("integrationTestSpock") {
-        sharedLibrary.withJenkins(this)
-        sources {
-            groovy.setSrcDirs(listOf("test/integration-spock/groovy"))
-        }
-        dependencies {
-            implementation(libs.spock.core)
-        }
-        targets.all {
-            testTask.configure {
-                dependsOn(prepareJenkinsTestDeps)
-                classpath += files(layout.buildDirectory.dir("jth-test-resources"))
-            }
-        }
-    }
-
-val integrationTestKotest =
-    testing.suites.register<JvmTestSuite>("integrationTestKotest") {
-        sharedLibrary.withJenkins(this)
-        useJUnitJupiter(libs.versions.junit.jupiter)
-        sources {
-            kotlin.setSrcDirs(listOf("test/integration-kotest/kotlin"))
-        }
-        dependencies {
-            implementation(libs.kotest.engine)
-            runtimeOnly(libs.kotest.runner)
-            implementation(libs.kotest.assertions)
-            implementation(libs.kotest.decoroutinator)
-            implementation(libs.coroutines.core)
-        }
-        targets.all {
-            testTask.configure {
-                systemProperty("kotest.framework.parallelism", kotestParallelism)
-                dependsOn(prepareJenkinsTestDeps)
-                classpath += files(layout.buildDirectory.dir("jth-test-resources"))
-            }
-        }
-    }
+tasks.named<Test>("integrationTest") {
+    dependsOn(filterIntegrationGroovyMain)
+    val original = groovyMainOutput.get().asFile
+    classpath = files(
+        classpath.filter { it != original },
+        filteredGroovyMain
+    )
+}
 
 // https://github.com/JetBrains/gradle-idea-ext-plugin/issues/114
 fun org.gradle.plugins.ide.idea.model.IdeaModule.settings(configure: org.jetbrains.gradle.ext.ModuleSettings.() -> Unit) =
@@ -608,6 +657,13 @@ val org.jetbrains.gradle.ext.ModuleSettings.packagePrefix: org.jetbrains.gradle.
 
 idea {
     module {
+        if (mocklibSrc.isDirectory) {
+            sourceDirs.add(mocklibSrc)
+        }
+        if (mocklibResources.isDirectory) {
+            resourceDirs.add(mocklibResources)
+        }
+
         settings {
             packagePrefix["src"]  = "org.nut.dynamatrix"
             packagePrefix["vars"] = "org.nut.dynamatrix"
@@ -621,7 +677,7 @@ idea {
 
 // https://github.com/mkobit/jenkins-pipeline-shared-libraries-gradle-plugin/issues/69
 tasks {
-    wrapper {
+    named<Wrapper>("wrapper") {
         gradleVersion = "9.4.1"
         distributionType = Wrapper.DistributionType.ALL
     }
@@ -643,28 +699,24 @@ tasks {
         }
     }
 
+    // The Groovy compile task for integrationTest now uses its own classpath.
+    // Previously, it borrowed from integrationTestSpockCompileClasspath because Spock's
+    // dependencies provided the Groovy 2.4.21 classpath needed for Jenkins-compatible
+    // compilation. Since groovy-all:2.4.21 is already on the integrationTestCompileClasspath,
+    // the suite is self-sufficient.
     named<GroovyCompile>("compileIntegrationTestGroovy") {
-        groovyClasspath = configurations.getByName("integrationTestSpockCompileClasspath")
-    }
-
-    named<GroovyCompile>("compileIntegrationTestJunitGroovy") {
-        // Borrowing Groovy classpath from Spock, which must have it:
-        groovyClasspath = configurations.getByName("integrationTestSpockCompileClasspath")
-    }
-
-    named<GroovyCompile>("compileIntegrationTestSpockGroovy") {
-        groovyClasspath = configurations.getByName("integrationTestSpockCompileClasspath")
+        groovyClasspath = configurations.getByName("integrationTestCompileClasspath")
     }
 
     check {
-        dependsOn(integrationTestJunit, integrationTestSpock, integrationTestKotest)
+        dependsOn("integrationTest")
     }
 
-    // No unit tests exist yet (test/unit/ is absent), so wire the standard `test` task to
-    // trigger all integration suites. finalizedBy avoids a cycle with mkobit's
-    // mustRunAfter(tasks.test) constraint set on every withJenkins() suite.
+    // Wire the standard `test` task to also trigger the integration suite along with unit tests.
+    // The mkobit plugin sets mustRunAfter(test) on integrationTest, which means integrationTest
+    // will run after test completes. finalizedBy ensures integrationTest runs after test finishes.
     named<Test>("test") {
-        finalizedBy(integrationTestJunit, integrationTestSpock, integrationTestKotest)
+        finalizedBy("integrationTest")
     }
 }
 
@@ -693,5 +745,3 @@ spotless {
 }
 */
 
-tasks.named("codenarcIntegrationTestJunit") { enabled = false }
-tasks.named("codenarcIntegrationTestSpock") { enabled = false }
