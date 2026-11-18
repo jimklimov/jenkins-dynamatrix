@@ -191,15 +191,17 @@ class genericPipelineTest {
      *
      *  In the {@code build.grade.kts} recipe we have several blocks
      *  of code to not-copy "plain groovy" precompiled files, but
-     *  only for the global variables (lacking the java namespace).
-     *  This test essentially ensures non-regression of those recipes.
+     *  only for the global variables (lacking the java namespace),
+     *  meaning the library {@code src/...} classes should still work
+     *  (see "trivial step and class" case below).<br/>
+     *
+     *  These two tests essentially ensure non-regression of those
+     *  recipes.
      */
     @Test
     @WithTimeout(1500)
     void "Testing global vars usability - trivial step"(JenkinsRule rule) {
         final CpsFlowDefinition flow = new CpsFlowDefinition('''
-            //@Library("jenkins-dynamatrix") _
-
             echo "Calling myGlobalVariableNoOp:"
             def info = myGlobalVariableNoOp()
             echo "Global variable runtime class: ${info}"
@@ -209,6 +211,42 @@ class genericPipelineTest {
 
             echo "DONE"
         ''', true)
+
+        final WorkflowJob workflowJob = rule.createProject(WorkflowJob, 'pSh')
+        workflowJob.definition = flow
+        WorkflowRun run = workflowJob.scheduleBuild2(0).get();
+
+        rule.assertBuildStatus(hudson.model.Result.SUCCESS, run)
+        rule.assertLogContains("myGlobalVariableNoOp:", run)
+        rule.assertLogContains("myGlobalVariable:", run)
+        rule.assertLogContains("DONE", run)
+
+        rule.assertLogNotContains("superclass:groovy.lang.Script", run)
+        rule.assertLogContains("superclass:org.jenkinsci.plugins.workflow.cps.CpsScript", run)
+    }
+
+    /** @see "Testing global vars usability - trivial step" */
+    @Test
+    @WithTimeout(1500)
+    void "Testing global vars usability - trivial step and class"(JenkinsRule rule) {
+        // Like "Testing global vars usability - trivial step" but with
+        // a call to JSL class method and non-sandboxed due to this
+        final CpsFlowDefinition flow = new CpsFlowDefinition('''
+            @Library("jenkins-dynamatrix") _
+            import org.nut.dynamatrix.*
+
+            echo "Calling myGlobalVariableNoOp:"
+            def info = myGlobalVariableNoOp()
+            echo "Global variable runtime class: ${info}"
+
+            echo "Calling myGlobalVariable:"
+            myGlobalVariable()
+
+            echo "Calling a 'real' JSL class method:"
+            echo Utils.castString(info)
+
+            echo "DONE"
+        ''', false)
 
         final WorkflowJob workflowJob = rule.createProject(WorkflowJob, 'pSh')
         workflowJob.definition = flow
