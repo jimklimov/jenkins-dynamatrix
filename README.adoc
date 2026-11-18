@@ -556,15 +556,30 @@ Random example self-tests:
 
 * https://github.com/jenkinsci/workflow-cps-plugin/blob/master/src/test/java/org/jenkinsci/plugins/workflow/cps/DSLTest.java
 
-Unit-tests of the JSL library
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Unit-tests and integration-tests of the JSL library
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This library is tested with the help of "mkobit" plugins referenced above.
 Tests are located in the `tests/` directory and implement example pipelines
 which are executed in either a temporary Jenkins environment provided by a
 `JenkinsRule` environment (from `jenkins-test-harness` project) or by a more
-dedicated server behind a `RealJenkinsRule`. They can be executed by an IDE
-(e.g. press `F9` in IntelliJ IDEA) or by `./gradlew integrationTest`.
+dedicated server behind a `RealJenkinsRule`.
+
+Some tests are implemented as unit tests and run quickly to call bits of JSL
+code directly, others are integration tests running pipelines in `JenkinsRule`
+instances. Both inject a `test/mocklib` part of code as if they were also JSL
+sources -- test global variables (steps) and mock node/label data stash to
+instantiate and test against. Due to class loader constraints, these bits of
+code are easiest to use when they are part of the loaded library -- but they
+do not make sense being part of each and every production environment.
+
+They can be executed by an IDE (e.g. press `F9` in IntelliJ IDEA) or by
+`./gradlew check` (or some more specific
+`./gradlew integrationTest --tests 'org.nut.dynamatrix.genericPipelineTest'` etc.)
+Note that while in command line you can run also `./gradlew test` and it
+would chain-run the `integrationTest`, the IDEA Gradle Test Runner does not
+parse that part of `build.gradle.kts` recipe and only runs unit tests for
+the `:test` goal.
 
 Troubleshooting
 ~~~~~~~~~~~~~~~
