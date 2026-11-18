@@ -1,4 +1,4 @@
-name: Gradle test
+name: Gradle check
 
 on:
   push:
@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  check:
     runs-on: ubuntu-latest
     steps:
       - name: Check out source
@@ -28,5 +28,5 @@ jobs:
           cache-read-only: ${{ github.event_name != 'push' || github.ref != 'refs/heads/master' }}
           cache-cleanup: on-success
 
-      - name: Run tests
-        run: ./gradlew test
+      - name: Run tests and checks
+        run: ./gradlew check
