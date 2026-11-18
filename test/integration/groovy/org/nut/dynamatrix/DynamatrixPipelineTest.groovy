@@ -212,7 +212,7 @@ class DynamatrixPipelineTest {
         rule.assertLogNotContains("java.lang.Error", run)
         rule.assertLogNotContains("java.lang.Exception", run)
         rule.assertLogNotContains("Closure", run)
-        verifySummaryAgainstReference(run, "test/resources/ci.slowBuildStages-list-autotools.txt")
+        verifySummaryAgainstReference(run, "test/resources/ci.DynamatrixPipelineTest.slowBuildStages-list-autotools.txt")
     }
 
     // ========================================================================
@@ -308,7 +308,7 @@ class DynamatrixPipelineTest {
         rule.assertLogContains("Discovered", run)
         rule.assertLogNotContains("expected to call", run)
         rule.assertLogNotContains("Closure", run)
-        verifySummaryAgainstReference(run, "test/resources/ci.slowBuildStages-list-cibuild.txt")
+        verifySummaryAgainstReference(run, "test/resources/ci.DynamatrixPipelineTest.slowBuildStages-list-cibuild.txt")
     }
 
     // ========================================================================
@@ -370,7 +370,7 @@ class DynamatrixPipelineTest {
         rule.assertLogContains("SUCCESS: spellcheck legacy string test passed", run)
         rule.assertLogNotContains("expected to call", run)
         rule.assertLogNotContains("Closure", run)
-        verifySummaryAgainstReference(run, "test/resources/ci.spellcheckStages-list-legacy.txt")
+        verifySummaryAgainstReference(run, "test/resources/ci.DynamatrixPipelineTest.spellcheckStages-list-legacy.txt")
     }
 
     // ========================================================================
@@ -445,7 +445,7 @@ class DynamatrixPipelineTest {
         rule.assertLogContains("SUCCESS: spellcheck closure test passed", run)
         rule.assertLogNotContains("expected to call", run)
         rule.assertLogNotContains("Closure", run)
-        verifySummaryAgainstReference(run, "test/resources/ci.spellcheckStages-list-closure.txt")
+        verifySummaryAgainstReference(run, "test/resources/ci.DynamatrixPipelineTest.spellcheckStages-list-closure.txt")
     }
 
     // ========================================================================
@@ -507,7 +507,7 @@ class DynamatrixPipelineTest {
         rule.assertLogContains("SUCCESS: shellcheck legacy string test passed", run)
         rule.assertLogNotContains("expected to call", run)
         rule.assertLogNotContains("Closure", run)
-        verifySummaryAgainstReference(run, "test/resources/ci.shellcheckStages-list-legacy.txt")
+        verifySummaryAgainstReference(run, "test/resources/ci.DynamatrixPipelineTest.shellcheckStages-list-legacy.txt")
     }
 
     // ========================================================================
@@ -584,7 +584,7 @@ class DynamatrixPipelineTest {
         rule.assertLogContains("SUCCESS: shellcheck closure test passed", run)
         rule.assertLogNotContains("expected to call", run)
         rule.assertLogNotContains("Closure", run)
-        verifySummaryAgainstReference(run, "test/resources/ci.shellcheckStages-list-closure.txt")
+        verifySummaryAgainstReference(run, "test/resources/ci.DynamatrixPipelineTest.shellcheckStages-list-closure.txt")
     }
 
     // ========================================================================
@@ -647,7 +647,7 @@ class DynamatrixPipelineTest {
         rule.assertLogContains("Discovered", run)
         rule.assertLogNotContains("expected to call", run)
         rule.assertLogNotContains("Closure", run)
-        verifySummaryAgainstReference(run, "test/resources/ci.quickcheckStages-list.txt")
+        verifySummaryAgainstReference(run, "test/resources/ci.DynamatrixPipelineTest.quickcheckStages-list.txt")
     }
 
     // ========================================================================
@@ -731,6 +731,6 @@ class DynamatrixPipelineTest {
         rule.assertLogContains("CONFIG #", run)
         rule.assertLogNotContains("expected to call", run)
         rule.assertLogNotContains("Closure", run)
-        verifySummaryAgainstReference(run, "test/resources/ci.slowBuildStages-list-sorting.txt")
+        verifySummaryAgainstReference(run, "test/resources/ci.DynamatrixPipelineTest.slowBuildStages-list-sorting.txt")
     }
 }
