@@ -731,6 +731,6 @@ class DynamatrixPipelineTest {
         rule.assertLogContains("CONFIG #", run)
         rule.assertLogNotContains("expected to call", run)
         rule.assertLogNotContains("Closure", run)
-        verifySummaryAgainstReference(run, "test/resources/ci.slowBuildStages-list.txt")
+        verifySummaryAgainstReference(run, "test/resources/ci.slowBuildStages-list-sorting.txt")
     }
 }
