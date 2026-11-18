@@ -183,6 +183,17 @@ class genericPipelineTest {
         rule.assertLogContains("global variable", run)
     }
 
+    /** Make sure the JenkinsRule instance class loader sees CPS-parsed
+     *  class code for our "global variables" ({@code vars/*.groovy}),
+     *  not the pre-compiled pure groovy (made by gradle) which lacks
+     *  the context of the {@link CpsScript} to use standard steps,
+     *  env, currentBuild etc.<br/>
+     *
+     *  In the {@code build.grade.kts} recipe we have several blocks
+     *  of code to not-copy "plain groovy" precompiled files, but
+     *  only for the global variables (lacking the java namespace).
+     *  This test essentially ensures non-regression of those recipes.
+     */
     @Test
     @WithTimeout(1500)
     void "Testing global vars usability - trivial step"(JenkinsRule rule) {
